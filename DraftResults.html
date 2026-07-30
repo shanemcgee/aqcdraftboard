@@ -1,0 +1,338 @@
+<!-- 
+    ========================================================================
+    REMARKS & SYSTEM DOCUMENTATION
+    ========================================================================
+    Owner/Creator: Shane McGee
+    Copyright: © 2026 Shane McGee. All rights reserved.
+    Application: AQC 2026 Fantasy Football Draft Board (Read-Only Viewer)
+    
+    SECTION-BY-SECTION FUNCTIONAL BREAKDOWN:
+    
+    1. Header Bar (Title & Live Status)
+       - Function: Displays the main application title and live synchronization status. 
+       - Automatically polls localStorage every 2 seconds to reflect real-time 
+         draft picks made by the commissioner on the main draft interface.
+    
+    2. Draft Board Grid Table
+       - Function: The core **10**-team, **15**-round serpentine draft visualization matrix.
+       - Dynamically renders round numbers, team manager columns, and individual pick cells.
+       - Automatically color-codes selected player cells based on position (QB, RB, WR, TE, K, DST) 
+         with high-contrast text rules and tracks absolute pick numbers in a read-only layout.
+    ========================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQC 2026 Fantasy Football Draft Board - Live Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa; /* Subtle cool off-white/gray */
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(16, 37, 66, 0.08); /* Subtle navy shadow */
+            border-top: 4px solid #1d3557; /* Subtle patriotic navy accent */
+            border-radius: 4px;
+        }
+
+        /* Top Header Bar containing Title and Status Indicator */
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            margin: 0;
+            color: #1d3557; /* Patriotic Navy */
+            font-size: 28px;
+            letter-spacing: -0.5px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1faee;
+            border: 1px solid #a8dadc;
+            color: #1d3557;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #2a9d8f;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 2px solid #cbd5e1;
+            text-align: center;
+            vertical-align: middle;
+            padding: 4px;
+            line-height: 1.2;
+        }
+
+        /* Round Column Header & Cells */
+        th.round-th {
+            width: 5%;
+            background-color: #1d3557; /* Patriotic Navy */
+            color: #fff;
+            font-size: 14px;
+        }
+
+        td.round-td {
+            width: 5%;
+            background-color: #f1f5f9; /* Soft cool gray-blue tint */
+            font-weight: bold;
+            font-size: 13px;
+            color: #1d3557;
+            height: 60px;
+        }
+
+        /* Player Team Cells */
+        td.player-td {
+            width: 9.5%;
+            height: 60px;
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        th.team-th {
+            width: 9.5%;
+            background-color: #1d3557; /* Patriotic Navy */
+            color: #fff;
+            font-size: 14px;
+        }
+
+        /* Draft cell typography: Name is bold and larger than details */
+        td .player-name {
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        td .player-details {
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
+        /* Very small pick number in the bottom corner */
+        td .pick-number {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 8px;
+            font-weight: bold;
+            opacity: 0.75;
+            line-height: 1;
+        }
+
+        /* Position Color-Coding Classes (Set to opacity ~0.56, balancing a 7 on a 1-10 scale) */
+        .QB-cell { 
+            background-color: rgba(255, 165, 0, 0.56) !important; /* Orange */
+            color: #0d1b2a !important;
+        } 
+
+        .RB-cell { 
+            background-color: rgba(46, 125, 50, 0.53) !important; /* Green */
+            color: #0d1b2a !important;
+        } 
+
+        .WR-cell { 
+            background-color: rgba(255, 235, 59, 0.62) !important; /* Yellow */
+            color: #0d1b2a !important;
+        } 
+
+        .TE-cell { 
+            background-color: rgba(156, 39, 176, 0.50) !important; /* Purple */
+            color: #0d1b2a !important;
+        } 
+
+        .K-cell { 
+            background-color: rgba(244, 143, 177, 0.60) !important; /* Pink */
+            color: #0d1b2a !important;
+        } 
+
+        .DST-cell { 
+            background-color: rgba(183, 28, 28, 0.50) !important; /* Burgundy/Red */
+            color: #0d1b2a !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header Bar with Title and Live Sync Indicator -->
+        <div class="header-bar">
+            <h1>AQC 2026 Fantasy Football Draft Board (Live Viewer)</h1>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span id="syncStatusText">Synced with Draft</span>
+            </div>
+        </div>
+
+        <!-- Draft Board Grid Table with Round Column -->
+        <div class="table-responsive">
+            <table id="draftBoard">
+                <thead>
+                    <tr id="headerRow"></tr>
+                </thead>
+                <tbody id="boardBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let teamNames = [];
+        const totalTeams = 10;
+        const totalRounds = 15;
+        let lastKnownStateString = "";
+
+        window.addEventListener("DOMContentLoaded", () => {
+            loadTeamNames();
+            initializeBoard();
+            pollDraftState();
+
+            // Poll localStorage every 2 seconds to automatically display live updates from the main draft board
+            setInterval(pollDraftState, 2000);
+        });
+
+        function loadTeamNames() {
+            const savedTeams = localStorage.getItem("aqc_team_names");
+            if (savedTeams) {
+                try {
+                    teamNames = JSON.parse(savedTeams);
+                } catch (e) {
+                    teamNames = [];
+                }
+            }
+            if (!teamNames || teamNames.length !== totalTeams) {
+                teamNames = [];
+                for (let t = 1; t <= totalTeams; t++) {
+                    teamNames.push(`Team ${t}`);
+                }
+            }
+        }
+
+        function initializeBoard() {
+            const headerRow = document.getElementById("headerRow");
+            const boardBody = document.getElementById("boardBody");
+
+            headerRow.innerHTML = "";
+            boardBody.innerHTML = "";
+
+            const roundTh = document.createElement("th");
+            roundTh.textContent = "Round";
+            roundTh.className = "round-th";
+            headerRow.appendChild(roundTh);
+
+            for (let t = 1; t <= totalTeams; t++) {
+                const th = document.createElement("th");
+                th.textContent = teamNames[t - 1] || `Team ${t}`;
+                th.className = "team-th";
+                headerRow.appendChild(th);
+            }
+
+            for (let r = 1; r <= totalRounds; r++) {
+                const tr = document.createElement("tr");
+
+                const roundTd = document.createElement("td");
+                roundTd.textContent = r;
+                roundTd.className = "round-td";
+                tr.appendChild(roundTd);
+
+                for (let t = 1; t <= totalTeams; t++) {
+                    const td = document.createElement("td");
+                    td.setAttribute("data-round", r);
+                    td.setAttribute("data-team", t);
+                    td.setAttribute("data-index", ((r - 1) * totalTeams) + (t - 1));
+                    td.className = "player-td";
+                    td.textContent = "";
+                    tr.appendChild(td);
+                }
+                boardBody.appendChild(tr);
+            }
+        }
+
+        function pollDraftState() {
+            // Also check if team names were updated on the main board
+            loadTeamNames();
+
+            const savedDraftState = localStorage.getItem("aqc_draft_state");
+            
+            // Only re-render if state has changed to prevent unnecessary layout thrashing
+            if (savedDraftState !== lastKnownStateString) {
+                lastKnownStateString = savedDraftState;
+                
+                // Clear existing cells first
+                const allPlayerCells = document.querySelectorAll("td.player-td");
+                allPlayerCells.forEach(cell => {
+                    cell.textContent = "";
+                    cell.className = "player-td";
+                });
+
+                if (savedDraftState) {
+                    try {
+                        const parsedState = JSON.parse(savedDraftState);
+                        parsedState.forEach(pick => {
+                            const cellIndex = ((pick.round - 1) * totalTeams) + (pick.team - 1);
+                            const targetCell = document.querySelector(`td[data-index='${cellIndex}']`);
+                            if (targetCell) {
+                                targetCell.innerHTML = `
+                                    <div class="player-name">${pick.playerObj.Player}</div>
+                                    <div class="player-details">${pick.playerObj.Position} - ${pick.playerObj.Team} | Bye: ${pick.playerObj.Bye}</div>
+                                    <div class="pick-number">${pick.pickNumber}</div>
+                                `;
+                                targetCell.className = "player-td";
+                                const pos = pick.playerObj.Position ? pick.playerObj.Position.trim() : "";
+                                targetCell.classList.add(`${pos}-cell`);
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Could not parse draft state", e);
+                    }
+                }
+                
+                // Re-initialize headers in case team names changed
+                const headerThs = document.querySelectorAll("#headerRow th.team-th");
+                headerThs.forEach((th, idx) => {
+                    th.textContent = teamNames[idx] || `Team ${idx + 1}`;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
