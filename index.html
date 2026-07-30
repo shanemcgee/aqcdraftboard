@@ -8,11 +8,11 @@
     
     SECTION-BY-SECTION FUNCTIONAL BREAKDOWN:
     
-    1. Header Bar (Title, Timer & Autodraft Star Button)
-       - Function: Displays the main application title, live countdown timer, and 
-         the new star button in the upper right corner. When clicked, it 
-         intelligently autodrafts the remaining board adhering to roster limits 
-         (QB: 1-3, RB: 2-6, WR: 2-6, TE: 1-3, K: 1, DEF: 1-2) through all 15 rounds.
+    1. Header Bar & Sticky Control Deck
+       - Function: Displays the main title, timer, and star autodraft button. 
+         Additionally, the search field, management buttons, and the entire draft 
+         grid table header (Team names and Round column) are locked in place as sticky 
+         elements, ensuring seamless visibility and access during vertical and horizontal scrolling.
     
     2. Team Roster Modal Overlay
        - Function: Allows viewing selections made by any specific team manager in an 
@@ -24,17 +24,9 @@
     4. Draft Order Setup Banner
        - Function: Handles the configuration of league manager names and pick sequence via CSV.
     
-    5. Controls Area (Search Input & Management Buttons Group)
-       - Search Container: Features a dynamic, real-time autocomplete search box that 
-         filters through available players while automatically hiding already-drafted athletes.
-       - Action Buttons Group: 
-         * Save Board: Positioned on the far left of the group for quick access.
-         * View Team Rosters / Add Custom Player / Reset to Pick 1 / Revert Last Pick / 
-           Reset Draft Order / Reset Players: Organized sequentially in the horizontal wrapper.
-    
-    6. Draft Board Grid Table
+    5. Draft Board Grid Table
        - Function: The core **10**-team, **15**-round serpentine draft visualization matrix 
-         with color-coded position styling.
+         with sticky headers and color-coded position styling.
     ========================================================================
 -->
 <!DOCTYPE html>
@@ -61,7 +53,7 @@
             border-radius: 4px;
         }
 
-        /* Top Header Bar containing Title, Timer, and Autodraft Star Button on Top Right */
+        /* Top Header Bar containing Title, Autodraft Star Button & Timer on Top Right */
         .header-bar {
             display: flex;
             justify-content: space-between;
@@ -301,12 +293,24 @@
             font-size: 13px;
         }
 
+        /* Frozen/Sticky Top Control Deck Area */
+        .sticky-controls-wrapper {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 200;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+            box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
         /* Top Controls Area with Search on Left and Horizontal Buttons Group on Right */
         .controls-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
             gap: 20px;
             flex-wrap: wrap;
         }
@@ -407,6 +411,8 @@
 
         .table-responsive {
             overflow-x: auto;
+            max-height: 75vh;
+            position: relative;
         }
 
         table {
@@ -422,12 +428,21 @@
             line-height: 1.2;
         }
 
+        /* Sticky Table Headers */
+        thead th {
+            position: sticky;
+            top: 73px; /* Matches height offset below the sticky control deck */
+            z-index: 100;
+        }
+
         /* Round Column Header & Cells */
         th.round-th {
             width: 5%;
             background-color: #1d3557; /* Patriotic Navy */
             color: #fff;
             font-size: 14px;
+            left: 0;
+            z-index: 101 !important;
         }
 
         td.round-td {
@@ -485,7 +500,7 @@
             max-height: 250px;
             overflow-y: auto;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.15);
-            z-index: 100;
+            z-index: 300;
             left: 0;
             border: 1px solid #cbd5e1;
             text-align: left;
@@ -566,24 +581,26 @@
             <input type="file" id="draftOrderInput" accept=".csv">
         </div>
 
-        <!-- Controls Area (Search on left, Horizontal smaller buttons on right with Save Board on far left) -->
-        <div class="controls-container">
-            <div class="search-container">
-                <input type="text" id="playerSearch" placeholder="Type player name (e.g., Gi)..." autocomplete="off" disabled>
-                <div id="searchResults" class="dropdown-content"></div>
-            </div>
-            <div class="buttons-group">
-                <button id="saveCsvBtn">Save Board</button>
-                <button id="viewTeamRosterBtn">View Team Rosters</button>
-                <button id="addCustomPlayerBtn">Add Custom Player</button>
-                <button id="resetDraftBtn">Reset to Pick 1</button>
-                <button id="revertBtn">Revert Last Pick</button>
-                <button id="resetDraftOrderBtn">Reset Draft Order</button>
-                <button id="resetCsvBtn" title="Load a new CSV file">Reset Players</button>
+        <!-- Frozen/Sticky Control Deck (Search & All Buttons) -->
+        <div class="sticky-controls-wrapper">
+            <div class="controls-container">
+                <div class="search-container">
+                    <input type="text" id="playerSearch" placeholder="Type player name (e.g., Gi)..." autocomplete="off" disabled>
+                    <div id="searchResults" class="dropdown-content"></div>
+                </div>
+                <div class="buttons-group">
+                    <button id="saveCsvBtn">Save Board</button>
+                    <button id="viewTeamRosterBtn">View Team Rosters</button>
+                    <button id="addCustomPlayerBtn">Add Custom Player</button>
+                    <button id="resetDraftBtn">Reset to Pick 1</button>
+                    <button id="revertBtn">Revert Last Pick</button>
+                    <button id="resetDraftOrderBtn">Reset Draft Order</button>
+                    <button id="resetCsvBtn" title="Load a new CSV file">Reset Players</button>
+                </div>
             </div>
         </div>
 
-        <!-- Draft Board Grid Table with Round Column -->
+        <!-- Draft Board Grid Table with Sticky Header Row -->
         <div class="table-responsive">
             <table id="draftBoard">
                 <thead>
@@ -741,12 +758,10 @@
                 return;
             }
 
-            // Run intelligent autodraft simulation for remaining picks
             runAutodraft();
         });
 
         function runAutodraft() {
-            // Build team position tracking counts from existing history
             const teamCounts = {};
             for (let t = 1; t <= totalTeams; t++) {
                 teamCounts[t] = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DST: 0, FLEX: 0 };
@@ -765,7 +780,6 @@
 
             const draftedNames = new Set(draftedPicksHistory.map(p => p.playerObj.Player));
 
-            // Iterate through all remaining pick slots
             for (let pickNum = currentDraftIndex + 1; pickNum <= totalCells; pickNum++) {
                 const roundNum = Math.ceil(pickNum / totalTeams);
                 let teamNum;
@@ -781,11 +795,8 @@
                 const currentRound = roundNum;
                 const picksRemainingForTeam = totalRounds - counts.QB - counts.RB - counts.WR - counts.TE - counts.K - counts.DST - counts.FLEX;
 
-                // Determine position priority based on minimum/maximum limits
-                // Rules: QB (1-3), RB (2-6), WR (2-6), TE (1-3), K (1), DEF (1-2)
                 let targetPos = null;
 
-                // Priority 1: Mandatory minimums that haven't been met if rounds are running low
                 if (counts.K < 1 && (currentRound >= 12 || picksRemainingForTeam <= (1 - counts.K))) {
                     targetPos = "K";
                 } else if (counts.QB < 1 && (currentRound >= 10 || picksRemainingForTeam <= (1 - counts.QB))) {
@@ -799,10 +810,7 @@
                 } else if (counts.WR < 2 && (currentRound >= 5 || picksRemainingForTeam <= (2 - counts.WR))) {
                     targetPos = "WR";
                 } else {
-                    // General positional weighting / Best Available matching limits
-                    // Check positions ordered by scarcity / need relative to maximums (RB/WR up to 6, QB/TE up to 3, DEF up to 2, K up to 1)
                     const availablePositions = [];
-                    
                     if (counts.RB < 6) availablePositions.push("RB");
                     if (counts.WR < 6) availablePositions.push("WR");
                     if (counts.QB < 3) availablePositions.push("QB");
@@ -810,19 +818,15 @@
                     if (counts.DST < 2) availablePositions.push("DST");
                     if (counts.K < 1) availablePositions.push("K");
 
-                    // Pick from available positions, preferring highest BPA value or balanced need
-                    // For general BPA, we scan the available player list in order.
                     targetPos = availablePositions.length > 0 ? availablePositions[0] : null;
                 }
 
-                // Find the highest-ranked available player matching targetPos (or absolute top available if none found)
                 let selectedPlayer = null;
                 for (let i = 0; i < players.length; i++) {
                     const p = players[i];
                     if (p && p.Player && !draftedNames.has(p.Player)) {
                         const pPos = p.Position ? p.Position.trim().toUpperCase() : "";
                         if (targetPos && pPos === targetPos) {
-                            // Ensure picking this player doesn't exceed maximums
                             if (pPos === "QB" && counts.QB >= 3) continue;
                             if (pPos === "RB" && counts.RB >= 6) continue;
                             if (pPos === "WR" && counts.WR >= 6) continue;
@@ -836,13 +840,11 @@
                     }
                 }
 
-                // Fallback: Just grab absolute top available player if specific position search yielded nothing
                 if (!selectedPlayer) {
                     for (let i = 0; i < players.length; i++) {
                         const p = players[i];
                         if (p && p.Player && !draftedNames.has(p.Player)) {
                             const pPos = p.Position ? p.Position.trim().toUpperCase() : "";
-                            // Obey hard maximum caps
                             if (pPos === "QB" && counts.QB >= 3) continue;
                             if (pPos === "RB" && counts.RB >= 6) continue;
                             if (pPos === "WR" && counts.WR >= 6) continue;
@@ -856,7 +858,6 @@
                     }
                 }
 
-                // Absolute last resort fallback if caps blocked everything
                 if (!selectedPlayer) {
                     for (let i = 0; i < players.length; i++) {
                         const p = players[i];
@@ -1023,7 +1024,7 @@
             draftOrderBanner.scrollIntoView({ behavior: 'smooth' });
         });
 
-        // Add Custom Player Button Trigger (asks prompts matching player CSV schema)
+        // Add Custom Player Button Trigger
         addCustomPlayerBtn.addEventListener("click", function() {
             if (currentDraftIndex >= totalCells) {
                 alert("Draft board is full!");
