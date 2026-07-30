@@ -8,11 +8,9 @@
     
     SECTION-BY-SECTION FUNCTIONAL BREAKDOWN:
     
-    1. Header Bar & Sticky Control Deck
-       - Function: Displays the main title, timer, and star autodraft button. 
-         Additionally, the search field, management buttons, and the entire draft 
-         grid table header (Team names and Round column) are locked in place as sticky 
-         elements, ensuring seamless visibility and access during vertical and horizontal scrolling.
+    1. Header Bar & Control Deck
+       - Function: Displays the main title, timer, star autodraft button, search field, 
+         and management buttons in a standard scrolling layout.
     
     2. Team Roster Modal Overlay
        - Function: Allows viewing selections made by any specific team manager in an 
@@ -26,7 +24,7 @@
     
     5. Draft Board Grid Table
        - Function: The core **10**-team, **15**-round serpentine draft visualization matrix 
-         with sticky headers and color-coded position styling.
+         with color-coded position styling.
     ========================================================================
 -->
 <!DOCTYPE html>
@@ -293,17 +291,13 @@
             font-size: 13px;
         }
 
-        /* Frozen/Sticky Top Control Deck Area */
-        .sticky-controls-wrapper {
-            position: sticky;
-            top: 0;
+        /* Standard Control Deck Area (Unfrozen) */
+        .controls-wrapper {
             background-color: #fff;
-            z-index: 200;
             padding-top: 10px;
-            padding-bottom: 10px;
+            padding-bottom: 15px;
             border-bottom: 2px solid #e2e8f0;
-            box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            margin-bottom: 0; /* Removed bottom margin so table header attaches cleanly */
+            margin-bottom: 15px;
         }
 
         /* Top Controls Area with Search on Left and Horizontal Buttons Group on Right */
@@ -411,8 +405,6 @@
 
         .table-responsive {
             overflow-x: auto;
-            max-height: 75vh;
-            position: relative;
         }
 
         table {
@@ -428,21 +420,16 @@
             line-height: 1.2;
         }
 
-        /* Sticky Table Headers - perfectly aligned right beneath the control deck */
+        /* Standard Table Headers (Unfrozen) */
         thead th {
-            position: sticky;
-            top: 55px; /* Dynamically matches exact control deck height */
-            z-index: 100;
+            background-color: #1d3557; /* Patriotic Navy */
+            color: #fff;
+            font-size: 14px;
         }
 
         /* Round Column Header & Cells */
         th.round-th {
             width: 5%;
-            background-color: #1d3557; /* Patriotic Navy */
-            color: #fff;
-            font-size: 14px;
-            left: 0;
-            z-index: 101 !important;
         }
 
         td.round-td {
@@ -464,9 +451,6 @@
 
         th.team-th {
             width: 9.5%;
-            background-color: #1d3557; /* Patriotic Navy */
-            color: #fff;
-            font-size: 14px;
         }
 
         /* Draft cell typography: Name is bold and larger than details */
@@ -581,8 +565,8 @@
             <input type="file" id="draftOrderInput" accept=".csv">
         </div>
 
-        <!-- Frozen/Sticky Control Deck (Search & All Buttons) -->
-        <div class="sticky-controls-wrapper">
+        <!-- Standard Control Deck (Search & All Buttons) -->
+        <div class="controls-wrapper">
             <div class="controls-container">
                 <div class="search-container">
                     <input type="text" id="playerSearch" placeholder="Type player name (e.g., Gi)..." autocomplete="off" disabled>
@@ -600,7 +584,7 @@
             </div>
         </div>
 
-        <!-- Draft Board Grid Table with Sticky Header Row -->
+        <!-- Draft Board Grid Table -->
         <div class="table-responsive">
             <table id="draftBoard">
                 <thead>
