@@ -303,7 +303,7 @@
             padding-bottom: 10px;
             border-bottom: 2px solid #e2e8f0;
             box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
+            margin-bottom: 0; /* Removed bottom margin so table header attaches cleanly */
         }
 
         /* Top Controls Area with Search on Left and Horizontal Buttons Group on Right */
@@ -428,10 +428,10 @@
             line-height: 1.2;
         }
 
-        /* Sticky Table Headers */
+        /* Sticky Table Headers - perfectly aligned right beneath the control deck */
         thead th {
             position: sticky;
-            top: 73px; /* Matches height offset below the sticky control deck */
+            top: 55px; /* Dynamically matches exact control deck height */
             z-index: 100;
         }
 
