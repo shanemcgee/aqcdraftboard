@@ -4,43 +4,39 @@
     ========================================================================
     Owner/Creator: Shane McGee
     Copyright: © 2026 Shane McGee. All rights reserved.
-    Application: AQC 2026 Fantasy Football Draft Board
+    Application: AQC 2026 Fantasy Football Draft Board (Commissioner Admin Page)
     
     SECTION-BY-SECTION FUNCTIONAL BREAKDOWN:
     
-    1. Header Bar (Title & Live Countdown Timer)
-       - Function: Displays the main application title and a built-in draft clock. 
-       - Features an interactive dropdown allowing the commissioner to toggle 
-         timer durations (2:00, 1:30, 1:00). Includes automated audio beeps for 
-         the final 10-second countdown and expiration to keep the draft moving.
+    1. Header Bar (Title, Team Roster Viewer Button & Live Countdown Timer)
+       - Function: Displays the main application title, a button to inspect team rosters, 
+         and a built-in draft clock. Features an interactive dropdown allowing the 
+         commissioner to toggle timer durations (2:00, 1:30, 1:00) with audio beeps.
     
-    2. Player Pool Setup Banner
-       - Function: Serves as the initial onboarding mechanism for the player data.
-       - Allows the user to upload a CSV file containing player rankings and details. 
-       - Once parsed using PapaParse, it caches the data locally in the browser 
-         and unlocks the main search input.
+    2. Team Roster Modal Overlay
+       - Function: Allows viewing selections made by any specific team manager in an 
+         organized list format with round and pick numbers directly from the admin interface.
     
-    3. Draft Order Setup Banner
-       - Function: Handles the configuration of league manager names and pick sequence.
-       - Hidden by default, but accessible via the reset order button. Parses custom 
-         CSV files to populate the top header cells with up to 10 distinct team owners.
+    3. Player Pool Setup Banner
+       - Function: Serves as the initial onboarding mechanism for the player data CSV.
     
-    4. Controls Area (Search Input & Management Buttons)
+    4. Draft Order Setup Banner
+       - Function: Handles the configuration of league manager names and pick sequence via CSV.
+    
+    5. Controls Area (Search Input & Management Buttons)
        - Search Container: Features a dynamic, real-time autocomplete search box that 
          filters through available players while automatically hiding already-drafted athletes.
        - Action Buttons Group: 
+         * Add Custom Player: Allows manually adding a non-existent player via prompts.
          * Save Board: Exports the current draft state into a timestamped CSV file.
          * Reset to Pick 1: Clears all active selections from the board to start over.
-         * Revert Last Pick: Undoes the most recent selection and restores the player to the pool.
+         * Revert Last Pick: Undoes the most recent selection.
          * Reset Draft Order: Triggers the CSV upload banner to update team names.
-         * Reset Players: Completely wipes localStorage caches to reload a fresh environment.
-         * Add Custom Player: Allows manually adding a non-existent player directly to the current pick using headers matching your players CSV columns.
+         * Reset Players: Completely wipes localStorage caches.
     
-    5. Draft Board Grid Table
-       - Function: The core **10**-team, **15**-round serpentine draft visualization matrix.
-       - Dynamically renders round numbers, team manager columns, and individual pick cells.
-       - Automatically color-codes selected player cells based on position (QB, RB, WR, TE, K, DST) 
-         with high-contrast text rules and tracks absolute pick numbers.
+    6. Draft Board Grid Table
+       - Function: The core **10**-team, **15**-round serpentine draft visualization matrix 
+         with color-coded position styling.
     ========================================================================
 -->
 <!DOCTYPE html>
@@ -48,7 +44,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AQC 2026 Fantasy Football Draft Board</title>
+    <title>AQC 2026 Fantasy Football Draft Board - Commissioner Admin</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,7 +63,7 @@
             border-radius: 4px;
         }
 
-        /* Top Header Bar containing Title and Timer */
+        /* Top Header Bar containing Title, Roster Viewer Button, and Timer */
         .header-bar {
             display: flex;
             justify-content: space-between;
@@ -75,6 +71,8 @@
             margin-bottom: 20px;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         h1 {
@@ -82,6 +80,29 @@
             color: #1d3557; /* Patriotic Navy */
             font-size: 28px;
             letter-spacing: -0.5px;
+        }
+
+        .header-left-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button#viewTeamRosterBtn {
+            background-color: #457b9d; /* Steel blue */
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button#viewTeamRosterBtn:hover {
+            background-color: #36617d;
         }
 
         /* Timer Widget Style */
@@ -128,6 +149,132 @@
         .timer-select:focus {
             outline: none;
             border-color: #a8dadc;
+        }
+
+        /* Modal Overlay Styles */
+        .modal-overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(13, 27, 42, 0.6); /* Dark semi-transparent backdrop */
+            backdrop-filter: blur(2px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 25px;
+            border: 1px solid #cbd5e1;
+            width: 90%;
+            max-width: 700px;
+            border-radius: 6px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .close-modal-btn {
+            color: #64748b;
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close-modal-btn:hover {
+            color: #1d3557;
+        }
+
+        .modal-header {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #1d3557;
+            font-size: 22px;
+        }
+
+        .roster-select-container {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .roster-select-container label {
+            font-weight: bold;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+        .roster-select {
+            background: #f8fafc;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            flex-grow: 1;
+            max-width: 350px;
+        }
+
+        .roster-select:focus {
+            outline: none;
+            border-color: #457b9d;
+            background-color: #fff;
+        }
+
+        .roster-table-container {
+            max-height: 380px;
+            overflow-y: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .roster-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .roster-table th, .roster-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+
+        .roster-table th {
+            background-color: #1d3557;
+            color: #fff;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .roster-table tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .empty-roster-msg {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+            font-style: italic;
         }
 
         /* Setup Banners for CSVs */
@@ -375,9 +522,12 @@
 <body>
 
     <div class="container">
-        <!-- Header Bar with Title and Timer on Top Right -->
+        <!-- Header Bar with Title, Roster Viewer Button, and Timer on Top Right -->
         <div class="header-bar">
-            <h1>AQC 2026 Fantasy Football Draft Board</h1>
+            <div class="header-left-actions">
+                <h1>AQC 2026 Fantasy Football Draft Board</h1>
+                <button id="viewTeamRosterBtn">View Team Rosters</button>
+            </div>
             <div class="timer-container">
                 <div id="timerDisplay" class="timer-display">02:00</div>
                 <select id="timerDuration" class="timer-select">
@@ -427,6 +577,36 @@
         </div>
     </div>
 
+    <!-- Team Roster Modal Overlay -->
+    <div id="rosterModal" class="modal-overlay">
+        <div class="modal-content">
+            <span id="closeModalBtn" class="close-modal-btn">&times;</span>
+            <h2 class="modal-header">Team Roster Inspector</h2>
+            
+            <div class="roster-select-container">
+                <label for="teamSelectDropdown">Select Team:</label>
+                <select id="teamSelectDropdown" class="roster-select"></select>
+            </div>
+
+            <div class="roster-table-container">
+                <table class="roster-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Round</th>
+                            <th style="width: 15%;">Pick #</th>
+                            <th style="width: 35%;">Player</th>
+                            <th style="width: 15%;">Position</th>
+                            <th style="width: 20%;">NFL Team</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rosterTableBody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Embedded PapaParse lightweight CSV parser -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script>
@@ -452,6 +632,12 @@
         const csvFileInput = document.getElementById("csvFileInput");
         const draftOrderInput = document.getElementById("draftOrderInput");
         
+        const viewTeamRosterBtn = document.getElementById("viewTeamRosterBtn");
+        const rosterModal = document.getElementById("rosterModal");
+        const closeModalBtn = document.getElementById("closeModalBtn");
+        const teamSelectDropdown = document.getElementById("teamSelectDropdown");
+        const rosterTableBody = document.getElementById("rosterTableBody");
+
         const timerDisplay = document.getElementById("timerDisplay");
         const timerDurationSelect = document.getElementById("timerDuration");
         let countdownInterval = null;
@@ -474,7 +660,6 @@
                 const gainNode = audioCtx.createGain();
                 
                 oscillator.type = 'sine';
-                // Final beep at 0 is higher pitch (1046.5Hz - C6), countdown beeps are 880Hz (A5)
                 oscillator.frequency.setValueAtTime(isFinal ? 1046.5 : 880, audioCtx.currentTime);
                 
                 gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
@@ -493,6 +678,7 @@
         window.addEventListener("DOMContentLoaded", () => {
             loadTeamNamesFromStorage();
             initializeBoard();
+            populateTeamDropdown();
             updateTimerDisplay();
             
             const cachedData = localStorage.getItem("rotoballer_players");
@@ -520,6 +706,75 @@
                 }
             }
         });
+
+        // Modal Open / Close Event Handlers
+        viewTeamRosterBtn.addEventListener("click", () => {
+            populateTeamDropdown();
+            renderTeamRoster();
+            rosterModal.style.display = "flex";
+        });
+
+        closeModalBtn.addEventListener("click", () => {
+            rosterModal.style.display = "none";
+        });
+
+        window.addEventListener("click", (e) => {
+            if (e.target === rosterModal) {
+                rosterModal.style.display = "none";
+            }
+        });
+
+        teamSelectDropdown.addEventListener("change", () => {
+            renderTeamRoster();
+        });
+
+        function populateTeamDropdown() {
+            const currentSelectedValue = teamSelectDropdown.value;
+            teamSelectDropdown.innerHTML = "";
+            
+            for (let t = 1; t <= totalTeams; t++) {
+                const teamName = teamNames[t - 1] || `Team ${t}`;
+                const option = document.createElement("option");
+                option.value = t;
+                option.textContent = `${t}. ${teamName}`;
+                teamSelectDropdown.appendChild(option);
+            }
+
+            if (currentSelectedValue) {
+                teamSelectDropdown.value = currentSelectedValue;
+            }
+        }
+
+        function renderTeamRoster() {
+            const selectedTeamNum = parseInt(teamSelectDropdown.value) || 1;
+            rosterTableBody.innerHTML = "";
+
+            const teamPicks = draftedPicksHistory.filter(pick => pick.team === selectedTeamNum);
+            teamPicks.sort((a, b) => a.pickNumber - b.pickNumber);
+
+            if (teamPicks.length === 0) {
+                const tr = document.createElement("tr");
+                const td = document.createElement("td");
+                td.colSpan = 5;
+                td.className = "empty-roster-msg";
+                td.textContent = "No players drafted by this team yet.";
+                tr.appendChild(td);
+                rosterTableBody.appendChild(tr);
+                return;
+            }
+
+            teamPicks.forEach(pick => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><strong>Round ${pick.round}</strong></td>
+                    <td>#${pick.pickNumber}</td>
+                    <td><strong>${pick.playerObj.Player}</strong></td>
+                    <td>${pick.playerObj.Position || "N/A"}</td>
+                    <td>${pick.playerObj.Team || "N/A"}</td>
+                `;
+                rosterTableBody.appendChild(tr);
+            });
+        }
 
         timerDurationSelect.addEventListener("change", function() {
             timeRemaining = parseInt(this.value);
@@ -613,7 +868,6 @@
                 Bye: playerBye ? playerBye.trim() : "N/A"
             };
 
-            // Push to local players array so it becomes tracked/saved if needed
             players.push(customPlayerObj);
             localStorage.setItem("rotoballer_players", JSON.stringify(players));
 
@@ -666,8 +920,9 @@
 
                     localStorage.setItem("aqc_team_names", JSON.stringify(teamNames));
                     draftOrderBanner.style.display = "none";
-                    draftOrderInput.value = ""; // clear file input
+                    draftOrderInput.value = "";
                     initializeBoard();
+                    populateTeamDropdown();
                     alert(`Successfully updated draft order with ${teamNames.length} managers!`);
                 },
                 error: function(err) {
@@ -740,23 +995,6 @@
                 }
                 boardBody.appendChild(tr);
             }
-
-            if (draftedPicksHistory.length > 0) {
-                draftedPicksHistory.forEach(pick => {
-                    const cellIndex = ((pick.round - 1) * totalTeams) + (pick.team - 1);
-                    const targetCell = document.querySelector(`td[data-index='${cellIndex}']`);
-                    if (targetCell) {
-                        targetCell.innerHTML = `
-                            <div class="player-name">${pick.playerObj.Player}</div>
-                            <div class="player-details">${pick.playerObj.Position} - ${pick.playerObj.Team} | Bye: ${pick.playerObj.Bye}</div>
-                            <div class="pick-number">${pick.pickNumber}</div>
-                        `;
-                        targetCell.className = "player-td";
-                        const pos = pick.playerObj.Position ? pick.playerObj.Position.trim() : "";
-                        targetCell.classList.add(`${pos}-cell`);
-                    }
-                });
-            }
         }
 
         function applyPickToBoard(round, team, playerObj, pickNum, recordHistory = true) {
@@ -782,10 +1020,13 @@
                     currentDraftIndex = Math.max(currentDraftIndex, pickNum);
                     draftedPicksHistory.push({ round, team, playerObj, pickNumber: pickNum });
                 }
+
+                if (rosterModal.style.display === "flex") {
+                    renderTeamRoster();
+                }
             }
         }
 
-        // Ad-hoc Save Board Button Trigger
         saveCsvBtn.addEventListener("click", function() {
             let csvRows = [];
             
@@ -824,7 +1065,6 @@
             document.body.removeChild(downloadLink);
         });
 
-        // Reset Draft back to Pick 1 Button Trigger
         resetDraftBtn.addEventListener("click", function() {
             if (confirm("Are you sure you want to clear all picks and reset the draft back to Pick 1? (Your player list and draft order will remain).")) {
                 draftedPicksHistory = [];
@@ -836,6 +1076,10 @@
                     cell.textContent = "";
                     cell.className = "player-td";
                 });
+
+                if (rosterModal.style.display === "flex") {
+                    renderTeamRoster();
+                }
             }
         });
 
@@ -914,6 +1158,10 @@
 
             currentDraftIndex = draftedPicksHistory.length;
             localStorage.setItem("aqc_draft_state", JSON.stringify(draftedPicksHistory));
+
+            if (rosterModal.style.display === "flex") {
+                renderTeamRoster();
+            }
         });
 
         document.addEventListener("click", function(e) {
