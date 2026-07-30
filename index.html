@@ -24,7 +24,7 @@
     
     5. Draft Board Grid Table
        - Function: The core **10**-team, **15**-round serpentine draft visualization matrix 
-         with color-coded position styling.
+         with color-coded position styling and a **frozen/sticky header row**.
     ========================================================================
 -->
 <!DOCTYPE html>
@@ -291,7 +291,7 @@
             font-size: 13px;
         }
 
-        /* Standard Control Deck Area (Unfrozen) */
+        /* Standard Control Deck Area */
         .controls-wrapper {
             background-color: #fff;
             padding-top: 10px;
@@ -404,7 +404,10 @@
         }
 
         .table-responsive {
+            max-height: 75vh;
+            overflow-y: auto;
             overflow-x: auto;
+            border: 1px solid #cbd5e1;
         }
 
         table {
@@ -420,16 +423,20 @@
             line-height: 1.2;
         }
 
-        /* Standard Table Headers (Unfrozen) */
+        /* Frozen Top Table Headers */
         thead th {
             background-color: #1d3557; /* Patriotic Navy */
             color: #fff;
             font-size: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         /* Round Column Header & Cells */
         th.round-th {
             width: 5%;
+            z-index: 11; /* Keep round corner header above team headers */
         }
 
         td.round-td {
@@ -584,7 +591,7 @@
             </div>
         </div>
 
-        <!-- Draft Board Grid Table -->
+        <!-- Draft Board Grid Table with Frozen Top Row -->
         <div class="table-responsive">
             <table id="draftBoard">
                 <thead>
