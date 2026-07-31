@@ -558,60 +558,79 @@
             }
         }
 
+        // Updated: defensive parsing and early return if nothing changed
         function pollDraftState() {
             loadTeamNames();
             populateTeamDropdown();
 
             const savedDraftState = localStorage.getItem("aqc_draft_state");
-            
-            // Only re-render if state has changed to prevent unnecessary layout thrashing
-            if (savedDraftState !== lastKnownStateString) {
-                lastKnownStateString = savedDraftState;
-                draftedPicksCache = [];
-                
-                // Clear existing cells first
-                const allPlayerCells = document.querySelectorAll("td.player-td");
-                allPlayerCells.forEach(cell => {
-                    cell.textContent = "";
-                    cell.className = "player-td";
-                });
 
-                if (savedDraftState) {
-                    try {
-                        const parsedState = JSON.parse(savedDraftState);
-                        draftedPicksCache = parsedState;
-                        
-                        parsedState.forEach(pick => {
-                            const cellIndex = ((pick.round - 1) * totalTeams) + (pick.team - 1);
-                            const targetCell = document.querySelector(`td[data-index='${cellIndex}']`);
-                            if (targetCell) {
-                                targetCell.innerHTML = `
-                                    <div class="player-name">${pick.playerObj.Player}</div>
-                                    <div class="player-details">${pick.playerObj.Position} - ${pick.playerObj.Team} | Bye: ${pick.playerObj.Bye}</div>
-                                    <div class="pick-number">${pick.pickNumber}</div>
-                                `;
-                                targetCell.className = "player-td";
-                                const pos = pick.playerObj.Position ? pick.playerObj.Position.trim() : "";
-                                targetCell.classList.add(`${pos}-cell`);
-                            }
-                        });
-                    } catch (e) {
-                        console.error("Could not parse draft state", e);
-                    }
-                }
-                
-                // Re-initialize headers in case team names changed
-                const headerThs = document.querySelectorAll("#headerRow th.team-th");
-                headerThs.forEach((th, idx) => {
-                    th.textContent = teamNames[idx] || `Team ${idx + 1}`;
-                });
+            // If nothing changed, nothing to do
+            if (savedDraftState === lastKnownStateString) {
+                return;
+            }
 
-                // Update roster modal view in real time if open
-                if (rosterModal.style.display === "flex") {
-                    renderTeamRoster();
+            // Attempt to parse first; if parse fails, don't update lastKnownStateString so we retry next poll
+            let parsedState = [];
+            if (savedDraftState) {
+                try {
+                    parsedState = JSON.parse(savedDraftState);
+                } catch (e) {
+                    console.error("Could not parse draft state", e);
+                    return; // exit early and try again later
                 }
             }
+
+            // Only commit to the "last known" state after a successful parse
+            lastKnownStateString = savedDraftState;
+            draftedPicksCache = parsedState;
+
+            // Clear existing cells first
+            const allPlayerCells = document.querySelectorAll("td.player-td");
+            allPlayerCells.forEach(cell => {
+                cell.textContent = "";
+                cell.className = "player-td";
+            });
+
+            // Render picks (parsedState is a validated array here)
+            parsedState.forEach(pick => {
+                const cellIndex = ((pick.round - 1) * totalTeams) + (pick.team - 1);
+                const targetCell = document.querySelector(`td[data-index='${cellIndex}']`);
+                if (targetCell) {
+                    targetCell.innerHTML = `
+                        <div class="player-name">${pick.playerObj.Player}</div>
+                        <div class="player-details">${pick.playerObj.Position} - ${pick.playerObj.Team} | Bye: ${pick.playerObj.Bye}</div>
+                        <div class="pick-number">${pick.pickNumber}</div>
+                    `;
+                    targetCell.className = "player-td";
+                    const pos = pick.playerObj.Position ? pick.playerObj.Position.trim() : "";
+                    targetCell.classList.add(`${pos}-cell`);
+                }
+            });
+
+            // Re-initialize headers in case team names changed
+            const headerThs = document.querySelectorAll("#headerRow th.team-th");
+            headerThs.forEach((th, idx) => {
+                th.textContent = teamNames[idx] || `Team ${idx + 1}`;
+            });
+
+            // Update roster modal view in real time if open
+            if (rosterModal.style.display === "flex") {
+                renderTeamRoster();
+            }
         }
+
+        // React immediately when localStorage is changed in another tab/window on the same origin
+        window.addEventListener('storage', function(e) {
+            if (!e) return;
+            if (e.key === 'aqc_draft_state') {
+                pollDraftState();
+            } else if (e.key === 'aqc_team_names') {
+                loadTeamNames();
+                initializeBoard();
+                pollDraftState();
+            }
+        });
     </script>
 </body>
 </html>
