@@ -11,7 +11,7 @@ let draftOrder = [
 ];
 
 let draftState = Array(TOTAL_PICKS).fill(null); // Array of 150 picks
-let players = []; // Player pool loaded from CSV
+let players = []; // Player pool strictly loaded from server CSV
 let currentPickIndex = 0;
 
 // Timer State
@@ -97,7 +97,7 @@ function loadSavedData() {
         }
     }
 
-    // 2. Load Draft State
+    // 2. Load Draft State (Picks)
     const savedState = localStorage.getItem("aqc_draft_state");
     if (savedState) {
         try {
@@ -109,11 +109,11 @@ function loadSavedData() {
         }
     }
 
-    // 3. Load Co-located players.csv automatically from the server
+    // 3. STRICTLY Load players.csv from the server directory
     fetch('players.csv')
         .then(response => {
             if (!response.ok) {
-                throw new Error("Could not find players.csv in the directory.");
+                throw new Error("Could not find players.csv on the server.");
             }
             return response.text();
         })
@@ -133,20 +133,8 @@ function loadSavedData() {
             });
         })
         .catch(err => {
-            console.warn("Automatic players.csv fetch failed. Falling back to localStorage cache.", err);
-            const cachedPlayers = localStorage.getItem("rotoballer_players");
-            if (cachedPlayers) {
-                try {
-                    players = JSON.parse(cachedPlayers);
-                    if (setupBanner) setupBanner.style.display = "none";
-                    if (searchInput) {
-                        searchInput.disabled = false;
-                        searchInput.placeholder = `Type player name (${players.length} players loaded)...`;
-                    }
-                } catch (e) {
-                    console.error("Error parsing cached players", e);
-                }
-            }
+            console.error("Server fetch failed.", err);
+            alert("Could not load players.csv from the server directory. Please ensure players.csv is uploaded to the same folder as this page.");
             renderBoard();
         });
 }
@@ -263,7 +251,7 @@ function getPositionColorClass(pos) {
 // SEARCH & DRAFT EXECUTION
 // ==========================================
 function setupEventListeners() {
-    // CSV Upload handler (Manual override or backup)
+    // CSV Upload handler (Now only for temporary local testing, does NOT save)
     if (csvFileInput) {
         csvFileInput.addEventListener("change", (e) => {
             const file = e.target.files[0];
@@ -274,14 +262,13 @@ function setupEventListeners() {
                 skipEmptyLines: true,
                 complete: function(results) {
                     players = results.data;
-                    localStorage.setItem("rotoballer_players", JSON.stringify(players));
                     if (setupBanner) setupBanner.style.display = "none";
                     if (searchInput) {
                         searchInput.disabled = false;
                         searchInput.placeholder = `Type player name (${players.length} players loaded)...`;
                     }
                     renderBoard();
-                    alert(`Successfully loaded ${players.length} players!`);
+                    alert(`Loaded ${players.length} players for this session. (Ensure you upload players.csv to the server for permanent access).`);
                 }
             });
         });
@@ -423,19 +410,13 @@ function resetToPick1() {
 }
 
 function resetPlayersPool() {
-    if (confirm("Are you completely clearing all player data and draft state?")) {
-        localStorage.removeItem("rotoballer_players");
+    if (confirm("Are you sure you want to completely clear the draft state? (Players list is tied to the server players.csv)")) {
         localStorage.removeItem("aqc_draft_state");
-        players = [];
         draftState = Array(TOTAL_PICKS).fill(null);
         currentPickIndex = 0;
-        if (setupBanner) setupBanner.style.display = "block";
-        if (searchInput) {
-            searchInput.disabled = true;
-            searchInput.placeholder = "Upload players.csv first...";
-        }
         renderBoard();
         updateCurrentPickIndicator();
+        alert("Draft state cleared.");
     }
 }
 
