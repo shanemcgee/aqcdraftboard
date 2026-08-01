@@ -104,8 +104,18 @@ function loadServerData() {
         }
     }
 
-    // 2. STRICTLY Load draftorder.csv from the server directory (with cache-buster timestamp)
-    fetch('draftorder.csv?t=' + new Date().getTime(), { cache: 'no-store' })
+    // 2. FORCE server-only read for draftorder.csv with absolute cache-busting headers and unique query parameters
+    const serverUrl = 'draftorder.csv?v=' + Date.now() + Math.random();
+    
+    fetch(serverUrl, {
+        method: 'GET',
+        cache: 'reload',
+        headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+    })
         .then(response => {
             if (!response.ok) {
                 throw new Error("Could not find draftorder.csv on the server.");
@@ -140,8 +150,18 @@ function loadServerData() {
 }
 
 function loadPlayersFromServer() {
-    // 3. STRICTLY Load players.csv from the server directory (with cache-buster timestamp)
-    fetch('players.csv?t=' + new Date().getTime(), { cache: 'no-store' })
+    // 3. FORCE server-only read for players.csv with cache-busting
+    const playerUrl = 'players.csv?v=' + Date.now() + Math.random();
+
+    fetch(playerUrl, {
+        method: 'GET',
+        cache: 'reload',
+        headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+    })
         .then(response => {
             if (!response.ok) {
                 throw new Error("Could not find players.csv on the server.");
