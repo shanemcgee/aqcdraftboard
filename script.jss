@@ -47,6 +47,16 @@ document.addEventListener("DOMContentLoaded", () => {
     populateTeamDropdown();
     setupEventListeners();
     initAudio();
+
+    // Listen for cross-tab updates (so viewer.html updates live when index.html makes a pick)
+    window.addEventListener("storage", (event) => {
+        if (event.key === "aqc_draft_state" || event.key === "aqc_team_names") {
+            loadSavedData();
+            renderBoard();
+            updateCurrentPickIndicator();
+            populateTeamDropdown();
+        }
+    });
 });
 
 function initAudio() {
