@@ -104,8 +104,8 @@ function loadServerData() {
         }
     }
 
-    // 2. STRICTLY Load draftorder.csv from the server directory
-    fetch('draftorder.csv')
+    // 2. STRICTLY Load draftorder.csv from the server directory (with cache-buster timestamp)
+    fetch('draftorder.csv?t=' + new Date().getTime(), { cache: 'no-store' })
         .then(response => {
             if (!response.ok) {
                 throw new Error("Could not find draftorder.csv on the server.");
@@ -117,10 +117,8 @@ function loadServerData() {
                 header: false,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    // Extract team names from the CSV rows
                     let loadedTeams = [];
                     results.data.forEach(row => {
-                        // Takes the first column or handles flat list of team names
                         let val = row[0] || row.Team || row.Name;
                         if (val && val.toString().trim() !== "" && val.toString().toLowerCase() !== "team") {
                             loadedTeams.push(val.toString().trim());
@@ -131,7 +129,6 @@ function loadServerData() {
                         draftOrder = loadedTeams.slice(0, TOTAL_TEAMS);
                     }
                     
-                    // Proceed to load players after team order is secured
                     loadPlayersFromServer();
                 }
             });
@@ -143,8 +140,8 @@ function loadServerData() {
 }
 
 function loadPlayersFromServer() {
-    // 3. STRICTLY Load players.csv from the server directory
-    fetch('players.csv')
+    // 3. STRICTLY Load players.csv from the server directory (with cache-buster timestamp)
+    fetch('players.csv?t=' + new Date().getTime(), { cache: 'no-store' })
         .then(response => {
             if (!response.ok) {
                 throw new Error("Could not find players.csv on the server.");
@@ -227,7 +224,6 @@ function renderBoard() {
 
         // 10 Pick Cells per Round (Serpentine / Snake logic)
         for (let c = 0; c < TOTAL_TEAMS; c++) {
-            // Even rounds (0, 2, 4...) go 1->10. Odd rounds (1, 3, 5...) go 10->1.
             const teamIndex = (r % 2 === 0) ? c : (TOTAL_TEAMS - 1 - c);
             const pickIndex = (r * TOTAL_TEAMS) + c;
             const pickData = draftState[pickIndex];
@@ -236,13 +232,11 @@ function renderBoard() {
             cellTd.className = "border border-slate-700 p-2 h-16 align-top relative transition-all duration-150";
             cellTd.dataset.pickIndex = pickIndex;
 
-            // Highlight current pick cell
             if (pickIndex === currentPickIndex) {
                 cellTd.classList.add("ring-2", "ring-sky-400", "bg-sky-950/30");
             }
 
             if (pickData) {
-                // Cell filled with player
                 const posClass = getPositionColorClass(pickData.Pos);
                 cellTd.className += ` ${posClass} text-white shadow-inner`;
                 
@@ -256,7 +250,6 @@ function renderBoard() {
                     </div>
                 `;
             } else {
-                // Empty cell
                 cellTd.innerHTML = `
                     <div class="flex justify-between items-start h-full text-[10px] text-slate-500 font-mono">
                         <span>${r + 1}.${c + 1}</span>
@@ -288,7 +281,6 @@ function getPositionColorClass(pos) {
 // SEARCH & DRAFT EXECUTION
 // ==========================================
 function setupEventListeners() {
-    // CSV Upload handler (Temporary local override for player pool testing only)
     if (csvFileInput) {
         csvFileInput.addEventListener("change", (e) => {
             const file = e.target.files[0];
@@ -311,7 +303,6 @@ function setupEventListeners() {
         });
     }
 
-    // Search input typing
     if (searchInput) {
         searchInput.addEventListener("input", (e) => {
             const query = e.target.value.trim().toLowerCase();
@@ -321,26 +312,23 @@ function setupEventListeners() {
                 return;
             }
 
-            // Filter out already drafted players
             const draftedNames = new Set(draftState.filter(p => p !== null).map(p => p.Player.toLowerCase()));
             
             const matches = players.filter(p => {
                 const name = (p.Player || p.Name || "").toLowerCase();
                 return name.includes(query) && !draftedNames.has(name);
-            }).slice(0, 10); // Limit to top 10 matches
+            }).slice(0, 10);
 
             displaySearchDropdown(matches);
         });
     }
 
-    // Close dropdown on outside click
     document.addEventListener("click", (e) => {
         if (!e.target.closest("#searchInput") && !e.target.closest("#searchDropdown")) {
             if (searchDropdown) searchDropdown.classList.add("hidden");
         }
     });
 
-    // Roster Modal bindings
     if (closeModalBtn) {
         closeModalBtn.addEventListener("click", () => rosterModal.classList.add("hidden"));
     }
@@ -447,7 +435,7 @@ function resetToPick1() {
 }
 
 function resetPlayersPool() {
-    if (confirm("Are you sure you want to completely clear the draft state? (Team names and players are strictly tied to server CSV files)")) {
+    if (confirm("Are you sure you want to completely clear the draft state?")) {
         localStorage.removeItem("aqc_draft_state");
         draftState = Array(TOTAL_PICKS).fill(null);
         currentPickIndex = 0;
@@ -502,17 +490,15 @@ function triggerAutoDraft() {
         return;
     }
 
-    // Simple realistic positional constraints auto-draft
     while (currentPickIndex < TOTAL_PICKS) {
         const draftedNames = new Set(draftState.filter(p => p !== null).map(p => p.Player.toLowerCase()));
         
-        // Find best available player from list
         const bestPlayer = players.find(p => {
             const name = (p.Player || p.Name || "").toLowerCase();
             return !draftedNames.has(name);
         });
 
-        if (!bestPlayer) break; // No players left
+        if (!bestPlayer) break;
 
         draftState[currentPickIndex] = {
             Player: bestPlayer.Player || bestPlayer.Name,
@@ -558,14 +544,11 @@ function renderTeamRosterModal(teamIndex) {
     let rosterHtml = `<h3 class="text-lg font-bold text-sky-400 mb-4">Roster: ${escapeHtml(teamName)}</h3>`;
     rosterHtml += `<div class="space-y-2 max-h-[60vh] overflow-y-auto pr-2">`;
 
-    // Find all picks belonging to this team
-    let teamPicksCount = 0;
     for (let r = 0; r < TOTAL_ROUNDS; r++) {
         const pickInRoundIndex = (r % 2 === 0) ? teamIndex : (TOTAL_TEAMS - 1 - teamIndex);
         const overallPickIndex = (r * TOTAL_TEAMS) + pickInRoundIndex;
         const pickData = draftState[overallPickIndex];
 
-        teamPicksCount++;
         rosterHtml += `
             <div class="flex justify-between items-center bg-slate-800 p-2 rounded border border-slate-700 text-sm">
                 <div>
@@ -624,10 +607,10 @@ function startTimer() {
         if (timeLeft > 0) {
             timeLeft--;
             if (timeLeft <= 10 && timeLeft > 0) {
-                playBeep(600, 0.1); // Tick beep
+                playBeep(600, 0.1);
             }
             if (timeLeft === 0) {
-                playBeep(880, 0.4); // End beep
+                playBeep(880, 0.4);
             }
             updateTimerDisplay();
         } else {
