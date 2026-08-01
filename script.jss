@@ -41,17 +41,22 @@ const rosterTeamSelect = document.getElementById("rosterTeamSelect");
 // INITIALIZATION
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    loadSavedData();
-    initializeBoard();
-    updateCurrentPickIndicator();
-    populateTeamDropdown();
-    setupEventListeners();
+    loadServerData();
     initAudio();
 
     // Listen for cross-tab updates (so viewer.html updates live when index.html makes a pick)
     window.addEventListener("storage", (event) => {
-        if (event.key === "aqc_draft_state" || event.key === "aqc_team_names") {
-            loadSavedData();
+        if (event.key === "aqc_draft_state") {
+            const savedState = localStorage.getItem("aqc_draft_state");
+            if (savedState) {
+                try {
+                    draftState = JSON.parse(savedState);
+                    currentPickIndex = draftState.findIndex(pick => pick === null);
+                    if (currentPickIndex === -1) currentPickIndex = TOTAL_PICKS;
+                } catch (e) {
+                    console.error("Error parsing saved draft state", e);
+                }
+            }
             renderBoard();
             updateCurrentPickIndicator();
             populateTeamDropdown();
@@ -84,31 +89,60 @@ function playBeep(frequency = 440, duration = 0.15) {
 }
 
 // ==========================================
-// LOCAL STORAGE & DATA LOADING
+// SERVER DATA LOADING (draftorder.csv & players.csv)
 // ==========================================
-function loadSavedData() {
-    // 1. Load Custom Team Names if available
-    const savedTeams = localStorage.getItem("aqc_team_names");
-    if (savedTeams) {
-        try {
-            draftOrder = JSON.parse(savedTeams);
-        } catch (e) {
-            console.error("Error parsing saved team names", e);
-        }
-    }
-
-    // 2. Load Draft State (Picks)
+function loadServerData() {
+    // 1. Load Draft State (Picks) from localStorage
     const savedState = localStorage.getItem("aqc_draft_state");
     if (savedState) {
         try {
             draftState = JSON.parse(savedState);
             currentPickIndex = draftState.findIndex(pick => pick === null);
-            if (currentPickIndex === -1) currentPickIndex = TOTAL_PICKS; // Draft complete
+            if (currentPickIndex === -1) currentPickIndex = TOTAL_PICKS;
         } catch (e) {
             console.error("Error parsing saved draft state", e);
         }
     }
 
+    // 2. STRICTLY Load draftorder.csv from the server directory
+    fetch('draftorder.csv')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Could not find draftorder.csv on the server.");
+            }
+            return response.text();
+        })
+        .then(csvText => {
+            Papa.parse(csvText, {
+                header: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    // Extract team names from the CSV rows
+                    let loadedTeams = [];
+                    results.data.forEach(row => {
+                        // Takes the first column or handles flat list of team names
+                        let val = row[0] || row.Team || row.Name;
+                        if (val && val.toString().trim() !== "" && val.toString().toLowerCase() !== "team") {
+                            loadedTeams.push(val.toString().trim());
+                        }
+                    });
+
+                    if (loadedTeams.length > 0) {
+                        draftOrder = loadedTeams.slice(0, TOTAL_TEAMS);
+                    }
+                    
+                    // Proceed to load players after team order is secured
+                    loadPlayersFromServer();
+                }
+            });
+        })
+        .catch(err => {
+            console.warn("Could not load draftorder.csv from server. Using default team names.", err);
+            loadPlayersFromServer();
+        });
+}
+
+function loadPlayersFromServer() {
     // 3. STRICTLY Load players.csv from the server directory
     fetch('players.csv')
         .then(response => {
@@ -128,23 +162,26 @@ function loadSavedData() {
                         searchInput.disabled = false;
                         searchInput.placeholder = `Type player name (${players.length} players loaded)...`;
                     }
-                    renderBoard();
+                    finalizeInitialization();
                 }
             });
         })
         .catch(err => {
-            console.error("Server fetch failed.", err);
-            alert("Could not load players.csv from the server directory. Please ensure players.csv is uploaded to the same folder as this page.");
-            renderBoard();
+            console.error("Server fetch failed for players.csv.", err);
+            alert("Could not load players.csv from the server directory. Please ensure players.csv is uploaded to the same folder.");
+            finalizeInitialization();
         });
+}
+
+function finalizeInitialization() {
+    initializeBoard();
+    updateCurrentPickIndicator();
+    populateTeamDropdown();
+    setupEventListeners();
 }
 
 function saveDraftState() {
     localStorage.setItem("aqc_draft_state", JSON.stringify(draftState));
-}
-
-function saveTeamNames() {
-    localStorage.setItem("aqc_team_names", JSON.stringify(draftOrder));
 }
 
 // ==========================================
@@ -172,7 +209,7 @@ function renderBoard() {
     for (let t = 0; t < TOTAL_TEAMS; t++) {
         const teamTh = document.createElement("th");
         teamTh.className = "p-3 border border-slate-700 text-center font-semibold text-sm truncate max-w-[130px]";
-        teamTh.innerText = `${t + 1}. ${draftOrder[t]}`;
+        teamTh.innerText = `${t + 1}. ${draftOrder[t] || 'Team ' + (t + 1)}`;
         headerRow.appendChild(teamTh);
     }
     draftBoardEl.appendChild(headerRow);
@@ -251,7 +288,7 @@ function getPositionColorClass(pos) {
 // SEARCH & DRAFT EXECUTION
 // ==========================================
 function setupEventListeners() {
-    // CSV Upload handler (Now only for temporary local testing, does NOT save)
+    // CSV Upload handler (Temporary local override for player pool testing only)
     if (csvFileInput) {
         csvFileInput.addEventListener("change", (e) => {
             const file = e.target.files[0];
@@ -268,7 +305,7 @@ function setupEventListeners() {
                         searchInput.placeholder = `Type player name (${players.length} players loaded)...`;
                     }
                     renderBoard();
-                    alert(`Loaded ${players.length} players for this session. (Ensure you upload players.csv to the server for permanent access).`);
+                    alert(`Loaded ${players.length} players for this session.`);
                 }
             });
         });
@@ -410,7 +447,7 @@ function resetToPick1() {
 }
 
 function resetPlayersPool() {
-    if (confirm("Are you sure you want to completely clear the draft state? (Players list is tied to the server players.csv)")) {
+    if (confirm("Are you sure you want to completely clear the draft state? (Team names and players are strictly tied to server CSV files)")) {
         localStorage.removeItem("aqc_draft_state");
         draftState = Array(TOTAL_PICKS).fill(null);
         currentPickIndex = 0;
