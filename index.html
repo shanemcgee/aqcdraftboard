@@ -30,581 +30,831 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AQC 2026 Fantasy Football Draft Board</title>
+    <title>AQC 2026 Fantasy Football Draft Board - Commissioner</title>
     <style>
-        :root {
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --border-color: #334155;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --danger: #ef4444;
-            --success: #22c55e;
-            
-            --pos-qb: #ef4444;
-            --pos-rb: #3b82f6;
-            --pos-wr: #10b981;
-            --pos-te: #f59e0b;
-            --pos-k: #8b5cf6;
-            --pos-def: #64748b;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa; /* Subtle cool off-white/gray */
+            margin: 0;
+            padding: 20px;
         }
 
-        header {
-            background-color: var(--bg-card);
-            border-bottom: 1px solid var(--border-color);
-            padding: 12px 24px;
+        .container {
+            max-width: 1750px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(16, 37, 66, 0.08); /* Subtle navy shadow */
+            border-top: 4px solid #1d3557; /* Subtle patriotic navy accent */
+            border-radius: 4px;
+        }
+
+        /* Top Commissioner Header Bar */
+        .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-shrink: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         h1 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            color: #fff;
+            margin: 0;
+            color: #1d3557; /* Patriotic Navy */
+            font-size: 26px;
+            letter-spacing: -0.5px;
         }
 
-        .controls-group {
+        .header-buttons {
             display: flex;
-            gap: 12px;
+            gap: 10px;
+            flex-wrap: wrap;
             align-items: center;
         }
 
-        button {
-            background-color: var(--accent);
-            color: white;
+        .btn {
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: bold;
             border: none;
-            padding: 6px 14px;
             border-radius: 4px;
-            font-weight: 600;
             cursor: pointer;
-            font-size: 0.875rem;
             transition: background-color 0.2s;
         }
 
-        button:hover {
-            background-color: var(--accent-hover);
-        }
+        .btn-primary { background-color: #457b9d; color: white; }
+        .btn-primary:hover { background-color: #36617d; }
 
-        button.btn-danger {
-            background-color: var(--danger);
-        }
-        button.btn-danger:hover {
-            background-color: #dc2626;
-        }
+        .btn-secondary { background-color: #1d3557; color: white; }
+        .btn-secondary:hover { background-color: #112238; }
 
-        .main-container {
+        .btn-warning { background-color: #e63946; color: white; }
+        .btn-warning:hover { background-color: #c52833; }
+
+        .btn-success { background-color: #2a9d8f; color: white; }
+        .btn-success:hover { background-color: #217d72; }
+
+        /* Main Layout: Two Columns (Player Pool Left, Draft Board Right) */
+        .main-layout {
             display: flex;
-            flex: 1;
-            overflow: hidden;
+            gap: 20px;
+            align-items: flex-start;
         }
 
-        .draft-board-wrapper {
-            flex: 1;
-            padding: 16px;
-            overflow: auto;
-            background-color: #090d16;
-        }
-
-        .board-grid {
-            display: grid;
-            grid-template-columns: repeat(10, minmax(140px, 1fr));
-            gap: 8px;
-            min-width: max-content;
-        }
-
-        .team-column {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
+        /* Left Panel: Player Pool */
+        .player-pool-panel {
+            flex: 0 0 380px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
             border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
-        .team-header {
-            background-color: #0f172a;
-            padding: 8px 10px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-align: center;
-            border-bottom: 1px solid var(--border-color);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .draft-slots {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 6px;
-        }
-
-        .draft-slot {
-            background-color: rgba(15, 23, 42, 0.6);
-            border: 1px dashed var(--border-color);
-            border-radius: 4px;
-            height: 42px;
-            padding: 4px 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            position: relative;
-            font-size: 0.75rem;
-        }
-
-        .draft-slot.filled {
-            border: 1px solid var(--border-color);
-            border-style: solid;
-            background-color: #1e293b;
-        }
-
-        .draft-slot .pick-num {
-            position: absolute;
-            top: 2px;
-            left: 4px;
-            font-size: 0.6rem;
-            color: var(--text-muted);
-        }
-
-        .draft-slot .player-info {
-            margin-top: 8px;
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1d3557;
+            margin-top: 0;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .draft-slot .p-name {
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 85px;
-        }
-
-        .badge {
-            font-size: 0.6rem;
-            padding: 1px 4px;
-            border-radius: 3px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .badge-qb { background-color: var(--pos-qb); color: white; }
-        .badge-rb { background-color: var(--pos-rb); color: white; }
-        .badge-wr { background-color: var(--pos-wr); color: white; }
-        .badge-te { background-color: var(--pos-te); color: white; }
-        .badge-k  { background-color: var(--pos-k); color: white; }
-        .badge-def{ background-color: var(--pos-def); color: white; }
-
-        .sidebar {
-            width: 320px;
-            background-color: var(--bg-card);
-            border-left: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
-
-        .sidebar-section {
-            padding: 16px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .sidebar-section h2 {
-            font-size: 0.95rem;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .on-the-clock-box {
-            background-color: #0f172a;
-            border: 1px solid var(--accent);
-            border-radius: 6px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .otc-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .otc-team {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-top: 4px;
-            color: #fff;
-        }
-
-        .otc-pick {
-            font-size: 0.8rem;
-            color: var(--accent);
-            margin-top: 2px;
-        }
-
-        .player-pool-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            padding: 16px;
-        }
-
-        .search-filter-group {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        input, select {
-            background-color: #0f172a;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 0.875rem;
-            outline: none;
-        }
-
-        input:focus, select:focus {
-            border-color: var(--accent);
-        }
-
-        input {
-            flex: 1;
-        }
-
-        .player-list {
-            flex: 1;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background-color: #0f172a;
-        }
-
-        .player-item {
+        .search-box {
+            width: 100%;
             padding: 8px 12px;
-            border-bottom: 1px solid var(--border-color);
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #457b9d;
+        }
+
+        .position-filters {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            transition: background-color 0.15s;
+            gap: 4px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
         }
 
-        .player-item:hover {
-            background-color: rgba(59, 130, 246, 0.15);
-        }
-
-        .player-item-details {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .player-item-name {
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .player-item-meta {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-        }
-
-        .undo-slot-btn {
-            background: none;
+        .filter-btn {
+            background: #e2e8f0;
             border: none;
-            color: var(--danger);
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 0.7rem;
-            padding: 2px 6px;
+            color: #334155;
+        }
+
+        .filter-btn.active {
+            background: #1d3557;
+            color: white;
+        }
+
+        .pool-list-container {
+            max-height: 580px;
+            overflow-y: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .pool-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .pool-table th, .pool-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+        }
+
+        .pool-table th {
+            background-color: #1d3557;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .pool-table tr {
+            cursor: pointer;
+        }
+
+        .pool-table tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        /* Right Panel: Draft Board Grid */
+        .draft-board-panel {
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 2px solid #cbd5e1;
+            text-align: center;
+            vertical-align: middle;
+            padding: 4px;
+            line-height: 1.2;
+        }
+
+        th.round-th {
+            width: 4%;
+            background-color: #1d3557;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        td.round-td {
+            width: 4%;
+            background-color: #f1f5f9;
+            font-weight: bold;
+            font-size: 13px;
+            color: #1d3557;
+            height: 60px;
+        }
+
+        th.team-th {
+            width: 9.6%;
+            background-color: #1d3557;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        td.player-td {
+            width: 9.6%;
+            height: 60px;
+            background-color: #ffffff;
+            position: relative;
+            cursor: pointer;
+        }
+
+        td.player-td:hover {
+            outline: 2px dashed #457b9d;
+            outline-offset: -2px;
+        }
+
+        td .player-name {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        td .player-details {
+            font-size: 10px;
+            font-weight: bold;
             margin-top: 2px;
         }
-        .undo-slot-btn:hover {
-            text-decoration: underline;
-            background: none;
+
+        td .pick-number {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 8px;
+            font-weight: bold;
+            opacity: 0.75;
+            line-height: 1;
+        }
+
+        /* Position Color-Coding Classes (Opacity ~0.56) */
+        .QB-cell { background-color: rgba(255, 165, 0, 0.56) !important; color: #0d1b2a !important; }
+        .RB-cell { background-color: rgba(46, 125, 50, 0.53) !important; color: #0d1b2a !important; }
+        .WR-cell { background-color: rgba(255, 235, 59, 0.62) !important; color: #0d1b2a !important; }
+        .TE-cell { background-color: rgba(156, 39, 176, 0.50) !important; color: #0d1b2a !important; }
+        .K-cell { background-color: rgba(244, 143, 177, 0.60) !important; color: #0d1b2a !important; }
+        .DST-cell { background-color: rgba(183, 28, 28, 0.50) !important; color: #0d1b2a !important; }
+
+        /* Modal Overlays */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(13, 27, 42, 0.6);
+            backdrop-filter: blur(2px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: 25px;
+            border: 1px solid #cbd5e1;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 6px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .modal-header {
+            margin-top: 0;
+            color: #1d3557;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            font-size: 13px;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .team-inputs-container {
+            max-height: 380px;
+            overflow-y: auto;
+            padding-right: 5px;
+            margin-bottom: 15px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>AQC 2026 FANTASY FOOTBALL DRAFT BOARD</h1>
-        <div class="controls-group">
-            <span id="current-pick-counter" style="font-size: 0.875rem; font-weight: 600; color: var(--text-muted);">Overall Pick: 1</span>
-            <button class="btn-danger" onclick="resetDraft()">Reset Draft</button>
-        </div>
-    </header>
-
-    <div class="main-container">
-        <!-- Draft Board Grid -->
-        <div class="draft-board-wrapper">
-            <div id="board-grid" class="board-grid">
-                <!-- Dynamically generated via JS -->
+    <div class="container">
+        <!-- Commissioner Header Bar -->
+        <div class="header-bar">
+            <h1>AQC 2026 Fantasy Football Draft Board - Commissioner</h1>
+            <div class="header-buttons">
+                <button class="btn btn-primary" id="manageTeamsBtn">Manage Team Names</button>
+                <button class="btn btn-secondary" onclick="window.open('aqc-viewer.html', '_blank')">Open Viewer Tab</button>
+                <button class="btn btn-success" id="undoPickBtn">Undo Last Pick</button>
+                <button class="btn btn-primary" id="exportBtn">Export Data</button>
+                <button class="btn btn-primary" id="importBtn">Import Data</button>
+                <input type="file" id="importFileInput" style="display: none;" accept=".json">
+                <button class="btn btn-warning" id="resetDraftBtn">Reset Draft</button>
             </div>
         </div>
 
-        <!-- Sidebar / Controls / Player Pool -->
-        <div class="sidebar">
-            <div class="sidebar-section">
-                <h2>Current Pick</h2>
-                <div class="on-the-clock-box">
-                    <div class="otc-label">On The Clock</div>
-                    <div id="otc-team-name" class="otc-team">Team 1</div>
-                    <div id="otc-pick-info" class="otc-pick">Round 1, Pick 1</div>
+        <!-- Main Two-Column Layout -->
+        <div class="main-layout">
+            <!-- Left Column: Player Pool -->
+            <div class="player-pool-panel">
+                <div class="panel-title">
+                  <span>Available Players</span>
+                  <span id="poolCountBadge" style="font-size: 12px; font-weight: normal; background: #e2e8f0; padding: 2px 6px; border-radius: 10px;">0 available</span>
+                </div>
+                <input type="text" id="playerSearch" class="search-box" placeholder="Search player name...">
+                <div class="position-filters">
+                    <button class="filter-btn active" data-pos="ALL">All</button>
+                    <button class="filter-btn" data-pos="QB">QB</button>
+                    <button class="filter-btn" data-pos="RB">RB</button>
+                    <button class="filter-btn" data-pos="WR">WR</button>
+                    <button class="filter-btn" data-pos="TE">TE</button>
+                    <button class="filter-btn" data-pos="K">K</button>
+                    <button class="filter-btn" data-pos="DST">DST</button>
+                </div>
+                <div class="pool-list-container">
+                    <table class="pool-table">
+                        <thead>
+                            <tr>
+                              <th>Player</th>
+                              <th style="width: 50px;">Pos</th>
+                              <th style="width: 55px;">Team</th>
+                              <th style="width: 45px;">Bye</th>
+                            </tr>
+                        </thead>
+                        <tbody id="playerPoolTableBody">
+                            <!-- Populated by PapaParse CSV -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="player-pool-container">
-                <h2>Available Players</h2>
-                <div class="search-filter-group">
-                    <input type="text" id="player-search" placeholder="Search player..." oninput="filterPlayers()">
-                    <select id="pos-filter" onchange="filterPlayers()">
-                        <option value="ALL">All Pos</option>
-                        <option value="QB">QB</option>
-                        <option value="RB">RB</option>
-                        <option value="WR">WR</option>
-                        <option value="TE">TE</option>
-                        <option value="K">K</option>
-                        <option value="DEF">DEF</option>
-                    </select>
-                </div>
-                <div id="player-list" class="player-list">
-                    <!-- Dynamically generated via JS -->
-                </div>
+            <!-- Right Column: Draft Board Matrix -->
+            <div class="draft-board-panel">
+                <table id="draftBoard">
+                    <thead>
+                        <tr id="headerRow"></tr>
+                    </thead>
+                    <tbody id="boardBody"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
+    <!-- Modal 1: Assign Player to Pick -->
+    <div id="assignModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="modal-header" id="assignModalTitle">Draft Player</h3>
+            <div class="form-group">
+                <label>Selected Player:</label>
+                <div id="modalPlayerInfo" style="font-weight: bold; font-size: 15px; color: #1d3557; padding: 6px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px;"></div>
+            </div>
+            <div class="form-group">
+                <label for="modalTeamSelect">Assign to Team:</label>
+                <select id="modalTeamSelect" class="form-control"></select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelAssignBtn">Cancel</button>
+                <button class="btn btn-success" id="confirmAssignBtn">Confirm Pick</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Team Name Manager -->
+    <div id="teamModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 550px;">
+            <h3 class="modal-header">Manage Team Managers / Names</h3>
+            <div class="team-inputs-container" id="teamInputsContainer">
+                <!-- Generated dynamically -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelTeamBtn">Cancel</button>
+                <button class="btn btn-success" id="saveTeamBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PapaParse local reference script tag -->
+    <script src="papaparse.min.js"></script>
     <script>
+        let allPlayers = [];
+        let teamNames = [];
+        let draftedPicks = []; // Array of { round, pickNumber, team (1-10), playerObj }
         const totalTeams = 10;
-        const totalRounds = 16;
-        
-        const teams = [
-            "Team 1", "Team 2", "Team 3", "Team 4", "Team 5", 
-            "Team 6", "Team 7", "Team 8", "Team 9", "Team 10"
-        ];
+        const totalRounds = 15;
 
-        let players = [
-            { id: 1, name: "Patrick Mahomes", pos: "QB", team: "KC" },
-            { id: 2, name: "Josh Allen", pos: "QB", team: "BUF" },
-            { id: 3, name: "Jalen Hurts", pos: "QB", team: "PHI" },
-            { id: 4, name: "Lamar Jackson", pos: "QB", team: "BAL" },
-            { id: 5, name: "Christian McCaffrey", pos: "RB", team: "SF" },
-            { id: 6, name: "Breece Hall", pos: "RB", team: "NYJ" },
-            { id: 7, name: "Bijan Robinson", pos: "RB", team: "ATL" },
-            { id: 8, name: "Jonathan Taylor", pos: "RB", team: "IND" },
-            { id: 9, name: "Jahmyr Gibbs", pos: "RB", team: "DET" },
-            { id: 10, name: "Saquon Barkley", pos: "RB", team: "PHI" },
-            { id: 11, name: "CeeDee Lamb", pos: "WR", team: "DAL" },
-            { id: 12, name: "Tyreek Hill", pos: "WR", team: "MIA" },
-            { id: 13, name: "Ja'Marr Chase", pos: "WR", team: "CIN" },
-            { id: 14, name: "Justin Jefferson", pos: "WR", team: "MIN" },
-            { id: 15, name: "Amon-Ra St. Brown", pos: "WR", team: "DET" },
-            { id: 16, name: "A.J. Brown", pos: "WR", team: "PHI" },
-            { id: 17, name: "Sam LaPorta", pos: "TE", team: "DET" },
-            { id: 18, name: "Travis Kelce", pos: "TE", team: "KC" },
-            { id: 19, name: "Mark Andrews", pos: "TE", team: "BAL" },
-            { id: 20, name: "Trey McBride", pos: "TE", team: "ARI" },
-            { id: 21, name: "Anthony Richardson", pos: "QB", team: "IND" },
-            { id: 22, name: "Joe Burrow", pos: "QB", team: "CIN" },
-            { id: 23, name: "Kyren Williams", pos: "RB", team: "LAR" },
-            { id: 24, name: "Derrick Henry", pos: "RB", team: "BAL" },
-            { id: 25, name: "De'Von Achane", pos: "RB", team: "MIA" },
-            { id: 26, name: "Garrett Wilson", pos: "WR", team: "NYJ" },
-            { id: 27, name: "Drake London", pos: "WR", team: "ATL" },
-            { id: 28, name: "Marvin Harrison Jr.", pos: "WR", team: "ARI" },
-            { id: 29, name: "Puka Nacua", pos: "WR", team: "LAR" },
-            { id: 30, name: "Deebo Samuel", pos: "WR", team: "SF" }
-        ];
+        let currentFilter = "ALL";
+        let selectedPlayerForDraft = null;
 
-        let draftPicks = new Array(totalTeams * totalRounds).fill(null);
+        // DOM Elements
+        const playerSearch = document.getElementById("playerSearch");
+        const playerPoolTableBody = document.getElementById("playerPoolTableBody");
+        const poolCountBadge = document.getElementById("poolCountBadge");
+        const filterBtns = document.querySelectorAll(".filter-btn");
 
-        function initBoard() {
-            const grid = document.getElementById('board-grid');
-            grid.innerHTML = '';
+        const assignModal = document.getElementById("assignModal");
+        const modalPlayerInfo = document.getElementById("modalPlayerInfo");
+        const modalTeamSelect = document.getElementById("modalTeamSelect");
+        const cancelAssignBtn = document.getElementById("cancelAssignBtn");
+        const confirmAssignBtn = document.getElementById("confirmAssignBtn");
 
-            for (let t = 0; t < totalTeams; t++) {
-                const teamCol = document.createElement('div');
-                teamCol.className = 'team-column';
+        const teamModal = document.getElementById("teamModal");
+        const manageTeamsBtn = document.getElementById("manageTeamsBtn");
+        const teamInputsContainer = document.getElementById("teamInputsContainer");
+        const cancelTeamBtn = document.getElementById("cancelTeamBtn");
+        const saveTeamBtn = document.getElementById("saveTeamBtn");
 
-                const teamHeader = document.createElement('div');
-                teamHeader.className = 'team-header';
-                teamHeader.innerText = teams[t];
-                teamCol.appendChild(teamHeader);
+        const resetDraftBtn = document.getElementById("resetDraftBtn");
+        const undoPickBtn = document.getElementById("undoPickBtn");
+        const exportBtn = document.getElementById("exportBtn");
+        const importBtn = document.getElementById("importBtn");
+        const importFileInput = document.getElementById("importFileInput");
 
-                const slotsContainer = document.createElement('div');
-                slotsContainer.className = 'draft-slots';
+        window.addEventListener("DOMContentLoaded", () => {
+            loadTeamNames();
+            loadDraftState();
+            initializeBoard();
+            renderBoard();
+            loadPlayerCSV();
 
-                for (let r = 0; r < totalRounds; r++) {
-                    const pickIndex = getPickIndex(r, t);
-                    const slot = document.createElement('div');
-                    slot.className = 'draft-slot';
-                    slot.id = `slot-${pickIndex}`;
-                    slot.innerHTML = `<span class="pick-num">${pickIndex + 1}</span>`;
-                    slotsContainer.appendChild(slot);
-                }
+            // Event Listeners
+            playerSearch.addEventListener("input", renderPlayerPool);
 
-                teamCol.appendChild(slotsContainer);
-                grid.appendChild(teamCol);
-            }
-            renderDraftState();
-        }
-
-        function getPickIndex(round, teamColIndex) {
-            if (round % 2 === 0) {
-                return round * totalTeams + teamColIndex;
-            } else {
-                return round * totalTeams + (totalTeams - 1 - teamColIndex);
-            }
-        }
-
-        function getRoundAndTeamFromOverall(overallIndex) {
-            const round = Math.floor(overallIndex / totalTeams);
-            const remainder = overallIndex % totalTeams;
-            let teamColIndex = (round % 2 === 0) ? remainder : (totalTeams - 1 - remainder);
-            return { round, teamColIndex };
-        }
-
-        function getCurrentOverallPick() {
-            for (let i = 0; i < draftPicks.length; i++) {
-                if (!draftPicks[i]) return i;
-            }
-            return draftPicks.length;
-        }
-
-        function draftPlayer(playerId) {
-            const currentPick = getCurrentOverallPick();
-            if (currentPick >= draftPicks.length) return;
-
-            const playerIndex = players.findIndex(p => p.id === playerId);
-            if (playerIndex === -1) return;
-
-            const player = players.splice(playerIndex, 1)[0];
-            draftPicks[currentPick] = player;
-
-            renderDraftState();
-        }
-
-        function undoPick(overallIndex) {
-            const player = draftPicks[overallIndex];
-            if (!player) return;
-
-            draftPicks[overallIndex] = null;
-            players.push(player);
-            players.sort((a, b) => a.id - b.id);
-
-            renderDraftState();
-        }
-
-        function renderDraftState() {
-            for (let i = 0; i < draftPicks.length; i++) {
-                const slot = document.getElementById(`slot-${i}`);
-                const player = draftPicks[i];
-
-                if (player) {
-                    slot.className = 'draft-slot filled';
-                    const posClass = `badge-${player.pos.toLowerCase()}`;
-                    slot.innerHTML = `
-                        <span class="pick-num">${i + 1}</span>
-                        <div class="player-info">
-                            <span class="p-name" title="${player.name}">${player.name}</span>
-                            <span class="badge ${posClass}">${player.pos}</span>
-                        </div>
-                        <button class="undo-slot-btn" onclick="undoPick(${i})">Undo</button>
-                    `;
-                } else {
-                    slot.className = 'draft-slot';
-                    slot.innerHTML = `<span class="pick-num">${i + 1}</span>`;
-                }
-            }
-
-            const currentPick = getCurrentOverallPick();
-            document.getElementById('current-pick-counter').innerText = `Overall Pick: ${Math.min(currentPick + 1, totalTeams * totalRounds)}`;
-
-            const otcTeamName = document.getElementById('otc-team-name');
-            const otcPickInfo = document.getElementById('otc-pick-info');
-
-            if (currentPick < draftPicks.length) {
-                const { round, teamColIndex } = getRoundAndTeamFromOverall(currentPick);
-                otcTeamName.innerText = teams[teamColIndex];
-                otcPickInfo.innerText = `Round ${round + 1}, Pick ${(round % 2 === 0) ? (teamColIndex + 1) : (totalTeams - teamColIndex)}`;
-            } else {
-                otcTeamName.innerText = "Draft Complete";
-                otcPickInfo.innerText = "All picks finished";
-            }
-
-            filterPlayers();
-        }
-
-        function filterPlayers() {
-            const searchVal = document.getElementById('player-search').value.toLowerCase();
-            const posVal = document.getElementById('pos-filter').value;
-            const listContainer = document.getElementById('player-list');
-
-            const filtered = players.filter(p => {
-                const matchesSearch = p.name.toLowerCase().includes(searchVal) || p.team.toLowerCase().includes(searchVal);
-                const matchesPos = (posVal === 'ALL' || p.pos === posVal);
-                return matchesSearch && matchesPos;
+            filterBtns.forEach(btn => {
+                btn.addEventListener("click", () => {
+                    filterBtns.forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    currentFilter = btn.getAttribute("data-pos");
+                    renderPlayerPool();
+                });
             });
 
-            listContainer.innerHTML = '';
+            cancelAssignBtn.addEventListener("click", () => {
+                assignModal.style.display = "none";
+                selectedPlayerForDraft = null;
+            });
+
+            confirmAssignBtn.addEventListener("click", executeDraftPick);
+
+            manageTeamsBtn.addEventListener("click", openTeamManagerModal);
+            cancelTeamBtn.addEventListener("click", () => teamModal.style.display = "none");
+            saveTeamBtn.addEventListener("click", saveTeamNamesFromModal);
+
+            resetDraftBtn.addEventListener("click", () => {
+                if (confirm("Are you sure you want to reset the entire draft? All picks will be cleared.")) {
+                    draftedPicks = [];
+                    saveAndSyncDraft();
+                    renderBoard();
+                    renderPlayerPool();
+                }
+            });
+
+            undoPickBtn.addEventListener("click", () => {
+                if (draftedPicks.length === 0) {
+                    alert("No picks to undo.");
+                    return;
+                }
+                draftedPicks.pop();
+                saveAndSyncDraft();
+                renderBoard();
+                renderPlayerPool();
+            });
+
+            exportBtn.addEventListener("click", exportDraftData);
+            importBtn.addEventListener("click", () => importFileInput.click());
+            importFileInput.addEventListener("change", importDraftData);
+        });
+
+        function loadTeamNames() {
+            const saved = localStorage.getItem("aqc_team_names");
+            if (saved) {
+                try {
+                    teamNames = JSON.parse(saved);
+                } catch (e) {
+                    teamNames = [];
+                }
+            }
+            if (!teamNames || teamNames.length !== totalTeams) {
+                teamNames = [];
+                for (let t = 1; t <= totalTeams; t++) {
+                    teamNames.push(`Team ${t}`);
+                }
+            }
+        }
+
+        function saveAndSyncDraft() {
+            localStorage.setItem("aqc_draft_state", JSON.stringify(draftedPicks));
+            localStorage.setItem("aqc_team_names", JSON.stringify(teamNames));
+        }
+
+        function loadDraftState() {
+            const savedState = localStorage.getItem("aqc_draft_state");
+            if (savedState) {
+                try {
+                    draftedPicks = JSON.parse(savedState);
+                } catch (e) {
+                    draftedPicks = [];
+                }
+            }
+        }
+
+        function loadPlayerCSV() {
+            Papa.parse("players.csv", {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    allPlayers = results.data;
+                    renderPlayerPool();
+                },
+                error: function(err) {
+                    console.error("Error loading players.csv:", err);
+                    playerPoolTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #e63946;">Error loading players.csv. Please ensure file exists in directory.</td></tr>`;
+                }
+            });
+        }
+
+        function initializeBoard() {
+            const headerRow = document.getElementById("headerRow");
+            const boardBody = document.getElementById("boardBody");
+
+            headerRow.innerHTML = "";
+            boardBody.innerHTML = "";
+
+            const roundTh = document.createElement("th");
+            roundTh.textContent = "Round";
+            roundTh.className = "round-th";
+            headerRow.appendChild(roundTh);
+
+            for (let t = 1; t <= totalTeams; t++) {
+                const th = document.createElement("th");
+                th.textContent = teamNames[t - 1] || `Team ${t}`;
+                th.className = "team-th";
+                headerRow.appendChild(th);
+            }
+
+            for (let r = 1; r <= totalRounds; r++) {
+                const tr = document.createElement("tr");
+
+                const roundTd = document.createElement("td");
+                roundTd.textContent = r;
+                roundTd.className = "round-td";
+                tr.appendChild(roundTd);
+
+                for (let t = 1; t <= totalTeams; t++) {
+                    const td = document.createElement("td");
+                    td.setAttribute("data-round", r);
+                    td.setAttribute("data-team", t);
+                    td.setAttribute("data-index", ((r - 1) * totalTeams) + (t - 1));
+                    td.className = "player-td";
+                    
+                    td.addEventListener("click", () => handleCellClick(r, t));
+                    tr.appendChild(td);
+                }
+                boardBody.appendChild(tr);
+            }
+        }
+
+        function renderBoard() {
+            // Reset all cells first
+            const allCells = document.querySelectorAll("td.player-td");
+            allCells.forEach(cell => {
+                cell.textContent = "";
+                cell.className = "player-td";
+            });
+
+            draftedPicks.forEach(pick => {
+                const cellIndex = ((pick.round - 1) * totalTeams) + (pick.team - 1);
+                const targetCell = document.querySelector(`td[data-index='${cellIndex}']`);
+                if (targetCell) {
+                    targetCell.innerHTML = `
+                        <div class="player-name">${pick.playerObj.Player}</div>
+                        <div class="player-details">${pick.playerObj.Position} - ${pick.playerObj.Team} | Bye: ${pick.playerObj.Bye}</div>
+                        <div class="pick-number">${pick.pickNumber}</div>
+                    `;
+                    const pos = pick.playerObj.Position ? pick.playerObj.Position.trim() : "";
+                    targetCell.classList.add(`${pos}-cell`);
+                }
+            });
+
+            // Update header text in case team names changed
+            const headerThs = document.querySelectorAll("#headerRow th.team-th");
+            headerThs.forEach((th, idx) => {
+                th.textContent = teamNames[idx] || `Team ${idx + 1}`;
+            });
+        }
+
+        function renderPlayerPool() {
+            playerPoolTableBody.innerHTML = "";
+            const searchTerm = playerSearch.value.toLowerCase().trim();
+
+            // Get set of drafted player names for quick lookup
+            const draftedPlayerNames = new Set(draftedPicks.map(p => p.playerObj.Player));
+
+            const filtered = allPlayers.filter(player => {
+                if (draftedPlayerNames.has(player.Player)) return false;
+
+                if (currentFilter !== "ALL" && player.Position && player.Position.trim() !== currentFilter) {
+                    return false;
+                }
+
+                if (searchTerm && !player.Player.toLowerCase().includes(searchTerm)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            poolCountBadge.textContent = `${filtered.length} available`;
+
             if (filtered.length === 0) {
-                listContainer.innerHTML = `<div style="padding: 12px; font-size: 0.8rem; color: var(--text-muted); text-align: center;">No available players found</div>`;
+                playerPoolTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748b; padding: 20px;">No available players found.</td></tr>`;
                 return;
             }
 
-            filtered.forEach(p => {
-                const item = document.createElement('div');
-                item.className = 'player-item';
-                const posClass = `badge-${p.pos.toLowerCase()}`;
-                item.innerHTML = `
-                    <div class="player-item-details">
-                        <span class="player-item-name">${p.name}</span>
-                        <span class="player-item-meta">${p.team} - <span class="badge ${posClass}">${p.pos}</span></span>
-                    </div>
+            filtered.forEach(player => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><strong>${player.Player}</strong></td>
+                    <td>${player.Position || ""}</td>
+                    <td>${player.Team || ""}</td>
+                    <td>${player.Bye || ""}</td>
                 `;
-                item.onclick = () => draftPlayer(p.id);
-                listContainer.appendChild(item);
+                tr.addEventListener("click", () => promptDraftPlayer(player));
+                playerPoolTableBody.appendChild(tr);
             });
         }
 
-        function resetDraft() {
-            if (confirm("Are you sure you want to reset the entire draft?")) {
-                location.reload();
+        function getNextAvailablePick() {
+            // Calculate next pick in snake draft sequence
+            const currentPickNumber = draftedPicks.length + 1;
+            if (currentPickNumber > totalTeams * totalRounds) return null;
+
+            const round = Math.ceil(currentPickNumber / totalTeams);
+            const positionInRound = (currentPickNumber - 1) % totalTeams;
+            
+            let team;
+            if (round % 2 === 1) {
+                team = positionInRound + 1; // 1 to 10
+            } else {
+                team = totalTeams - positionInRound; // 10 to 1
+            }
+
+            return { round, team, pickNumber: currentPickNumber };
+        }
+
+        function promptDraftPlayer(player) {
+            const nextPick = getNextAvailablePick();
+            if (!nextPick) {
+                alert("Draft is completely full (15 rounds completed).");
+                return;
+            }
+
+            selectedPlayerForDraft = player;
+            modalPlayerInfo.textContent = `${player.Player} (${player.Position} - ${player.Team})`;
+            document.getElementById("assignModalTitle").textContent = `Draft Pick #${nextPick.pickNumber} (Round ${nextPick.round})`;
+
+            // Populate team dropdown
+            modalTeamSelect.innerHTML = "";
+            for (let t = 1; t <= totalTeams; t++) {
+                const opt = document.createElement("option");
+                opt.value = t;
+                opt.textContent = `${t}. ${teamNames[t - 1]}`;
+                if (t === nextPick.team) {
+                    opt.selected = true;
+                }
+                modalTeamSelect.appendChild(opt);
+            }
+
+            assignModal.style.display = "flex";
+        }
+
+        function handleCellClick(round, team) {
+            // Check if cell already has a pick
+            const existingPickIndex = draftedPicks.findIndex(p => p.round === round && p.team === team);
+            if (existingPickIndex !== -1) {
+                const pick = draftedPicks[existingPickIndex];
+                if (confirm(`Remove ${pick.playerObj.Player} from Round ${round} (${teamNames[team - 1]})?`)) {
+                    draftedPicks.splice(existingPickIndex, 1);
+                    saveAndSyncDraft();
+                    renderBoard();
+                    renderPlayerPool();
+                }
+            } else {
+                alert("Please select an available player from the left panel to assign to this pick slot.");
             }
         }
 
-        window.onload = () => {
-            initBoard();
-        };
+        function executeDraftPick() {
+            if (!selectedPlayerForDraft) return;
+
+            const nextPick = getNextAvailablePick();
+            if (!nextPick) return;
+
+            const assignedTeam = parseInt(modalTeamSelect.value);
+
+            draftedPicks.push({
+                round: nextPick.round,
+                pickNumber: nextPick.pickNumber,
+                team: assignedTeam,
+                playerObj: selectedPlayerForDraft
+            });
+
+            saveAndSyncDraft();
+            renderBoard();
+            renderPlayerPool();
+
+            assignModal.style.display = "none";
+            selectedPlayerForDraft = null;
+        }
+
+        function openTeamManagerModal() {
+            teamInputsContainer.innerHTML = "";
+            for (let t = 1; t <= totalTeams; t++) {
+                const div = document.createElement("div");
+                div.className = "form-group";
+                div.innerHTML = `
+                    <label>Team ${t} Manager / Name:</label>
+                    <input type="text" class="form-control team-name-input" data-team-idx="${t - 1}" value="${teamNames[t - 1] || ''}">
+                `;
+                teamInputsContainer.appendChild(div);
+            }
+            teamModal.style.display = "flex";
+        }
+
+        function saveTeamNamesFromModal() {
+            const inputs = teamInputsContainer.querySelectorAll(".team-name-input");
+            inputs.forEach(input => {
+                const idx = parseInt(input.getAttribute("data-team-idx"));
+                const val = input.value.trim();
+                if (val) {
+                    teamNames[idx] = val;
+                }
+            });
+
+            saveAndSyncDraft();
+            initializeBoard();
+            renderBoard();
+            teamModal.style.display = "none";
+        }
+
+        function exportDraftData() {
+            const exportObj = {
+                teamNames: teamNames,
+                draftedPicks: draftedPicks
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
+            const downloadAnchor = document.createElement("a");
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "aqc_2026_draft_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importDraftData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.teamNames && Array.isArray(imported.teamNames)) {
+                      teamNames = imported.teamNames;
+                    }
+                    if (imported.draftedPicks && Array.isArray(imported.draftedPicks)) {
+                      draftedPicks = imported.draftedPicks;
+                    }
+                    saveAndSyncDraft();
+                    initializeBoard();
+                    renderBoard();
+                    renderPlayerPool();
+                    alert("Draft data imported successfully!");
+                } catch (err) {
+                    alert("Invalid JSON backup file.");
+                }
+            };
+            reader.readAsText(file);
+            importFileInput.value = "";
+        }
     </script>
 </body>
 </html>
