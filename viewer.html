@@ -4,7 +4,29 @@
     ========================================================================
     Owner/Creator: Shane McGee
     Copyright: © 2026 Shane McGee. All rights reserved.
-    Application: AQC 2026 Fantasy Football Draft Board (Public Viewer Page)
+    Application: AQC 2026 Fantasy Football Draft Board (Read-Only Viewer with Team Roster Overlay)
+    
+    SECTION-BY-SECTION FUNCTIONAL BREAKDOWN:
+    
+    1. Header Bar (Title, Team Roster Viewer Button & Live Status)
+       - Function: Displays the main application title, live synchronization status, 
+         and a dedicated button to open the Team Roster overlay modal.
+       - Automatically polls localStorage every 2 seconds to reflect real-time 
+         draft picks and team name adjustments made by the commissioner.
+    
+    2. Team Roster Modal Overlay
+       - Function: Allows league members to inspect the selections made by any specific 
+         team manager in an organized list format.
+       - Features a team dropdown selector, a summary count of drafted players, 
+         and a clean table displaying Round, Pick #, Player Name, Position, Team, and Bye.
+       - Closes via an 'X' button or clicking outside the modal box, returning seamlessly 
+         to the draft board view.
+    
+    3. Draft Board Grid Table
+       - Function: The core **10**-team, **15**-round serpentine draft visualization matrix.
+       - Dynamically renders round numbers, team manager columns, and individual pick cells.
+       - Automatically color-codes selected player cells based on position (QB, RB, WR, TE, K, DST) 
+         with high-contrast text rules and tracks absolute pick numbers.
     ========================================================================
 -->
 <!DOCTYPE html>
@@ -12,11 +34,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AQC 2026 Fantasy Football Draft Board - Public Viewer</title>
+    <title>AQC 2026 Fantasy Football Draft Board - Live Viewer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f5f7fa;
+            background-color: #f5f7fa; /* Subtle cool off-white/gray */
             margin: 0;
             padding: 20px;
         }
@@ -26,16 +48,17 @@
             margin: 0 auto;
             background: #fff;
             padding: 20px;
-            box-shadow: 0 4px 12px rgba(16, 37, 66, 0.08);
-            border-top: 4px solid #1d3557;
+            box-shadow: 0 4px 12px rgba(16, 37, 66, 0.08); /* Subtle navy shadow */
+            border-top: 4px solid #1d3557; /* Subtle patriotic navy accent */
             border-radius: 4px;
         }
 
+        /* Top Header Bar containing Title, Team Roster Button, and Status Indicator */
         .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 15px;
             flex-wrap: wrap;
@@ -44,50 +67,63 @@
 
         h1 {
             margin: 0;
-            color: #1d3557;
+            color: #1d3557; /* Patriotic Navy */
             font-size: 28px;
             letter-spacing: -0.5px;
         }
 
-        .header-right-group {
+        .header-actions {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 15px;
         }
 
-        .timer-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: #1d3557;
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 6px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-        }
-
-        .timer-display {
-            font-size: 22px;
+        button#viewTeamRosterBtn {
+            background-color: #457b9d; /* Steel blue */
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            font-size: 14px;
             font-weight: bold;
-            font-family: monospace;
-            letter-spacing: 1px;
-            min-width: 65px;
-            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
 
-        .timer-display.urgent {
-            color: #ff6b6b;
-            animation: pulse 0.5s infinite alternate;
+        button#viewTeamRosterBtn:hover {
+            background-color: #36617d;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1faee;
+            border: 1px solid #a8dadc;
+            color: #1d3557;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #2a9d8f;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
         }
 
         @keyframes pulse {
-            0% { opacity: 1; }
-            100% { opacity: 0.5; }
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
         }
 
         /* Modal Overlay Styles */
         .modal-overlay {
-            display: none;
+            display: none; /* Hidden by default */
             position: fixed;
             z-index: 1000;
             left: 0;
@@ -95,7 +131,7 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(13, 27, 42, 0.6);
+            background-color: rgba(13, 27, 42, 0.6); /* Dark semi-transparent backdrop */
             backdrop-filter: blur(2px);
             align-items: center;
             justify-content: center;
@@ -166,6 +202,12 @@
             max-width: 350px;
         }
 
+        .roster-select:focus {
+            outline: none;
+            border-color: #457b9d;
+            background-color: #fff;
+        }
+
         .roster-table-container {
             max-height: 380px;
             overflow-y: auto;
@@ -205,43 +247,8 @@
             font-style: italic;
         }
 
-        .controls-wrapper {
-            background-color: #fff;
-            padding-top: 10px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e2e8f0;
-            margin-bottom: 15px;
-        }
-
-        .controls-container {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-        }
-
-        button#viewTeamRosterBtn {
-            padding: 6px 12px;
-            font-size: 13px;
-            font-weight: bold;
-            color: white;
-            background-color: #457b9d;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            text-align: center;
-            white-space: nowrap;
-        }
-
-        button#viewTeamRosterBtn:hover {
-            background-color: #36617d;
-        }
-
         .table-responsive {
-            max-height: 75vh;
-            overflow-y: auto;
             overflow-x: auto;
-            border: 1px solid #cbd5e1;
         }
 
         table {
@@ -257,29 +264,24 @@
             line-height: 1.2;
         }
 
-        thead th {
-            background-color: #1d3557;
-            color: #fff;
-            font-size: 14px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
+        /* Round Column Header & Cells */
         th.round-th {
             width: 5%;
-            z-index: 11;
+            background-color: #1d3557; /* Patriotic Navy */
+            color: #fff;
+            font-size: 14px;
         }
 
         td.round-td {
             width: 5%;
-            background-color: #f1f5f9;
+            background-color: #f1f5f9; /* Soft cool gray-blue tint */
             font-weight: bold;
             font-size: 13px;
             color: #1d3557;
             height: 60px;
         }
 
+        /* Player Team Cells */
         td.player-td {
             width: 9.5%;
             height: 60px;
@@ -289,8 +291,12 @@
 
         th.team-th {
             width: 9.5%;
+            background-color: #1d3557; /* Patriotic Navy */
+            color: #fff;
+            font-size: 14px;
         }
 
+        /* Draft cell typography: Name is bold and larger than details */
         td .player-name {
             font-size: 15px;
             font-weight: bold;
@@ -302,6 +308,7 @@
             margin-top: 2px;
         }
 
+        /* Very small pick number in the bottom corner */
         td .pick-number {
             position: absolute;
             bottom: 2px;
@@ -312,29 +319,34 @@
             line-height: 1;
         }
 
-        /* Position Color-Coding Classes */
+        /* Position Color-Coding Classes (Set to opacity ~0.56, balancing a 7 on a 1-10 scale) */
         .QB-cell { 
-            background-color: rgba(255, 165, 0, 0.56) !important;
+            background-color: rgba(255, 165, 0, 0.56) !important; /* Orange */
             color: #0d1b2a !important;
         } 
+
         .RB-cell { 
-            background-color: rgba(46, 125, 50, 0.53) !important;
+            background-color: rgba(46, 125, 50, 0.53) !important; /* Green */
             color: #0d1b2a !important;
         } 
+
         .WR-cell { 
-            background-color: rgba(255, 235, 59, 0.62) !important;
+            background-color: rgba(255, 235, 59, 0.62) !important; /* Yellow */
             color: #0d1b2a !important;
         } 
+
         .TE-cell { 
-            background-color: rgba(156, 39, 176, 0.50) !important;
+            background-color: rgba(156, 39, 176, 0.50) !important; /* Purple */
             color: #0d1b2a !important;
         } 
+
         .K-cell { 
-            background-color: rgba(244, 143, 177, 0.60) !important;
+            background-color: rgba(244, 143, 177, 0.60) !important; /* Pink */
             color: #0d1b2a !important;
         } 
+
         .DST-cell { 
-            background-color: rgba(183, 28, 28, 0.50) !important;
+            background-color: rgba(183, 28, 28, 0.50) !important; /* Burgundy/Red */
             color: #0d1b2a !important;
         }
     </style>
@@ -342,24 +354,19 @@
 <body>
 
     <div class="container">
-        <!-- Header Bar with Title & Timer -->
+        <!-- Header Bar with Title, Roster Viewer Button, and Live Sync Indicator -->
         <div class="header-bar">
-            <h1>AQC 2026 Fantasy Football Draft Board (Viewer)</h1>
-            <div class="header-right-group">
-                <div class="timer-container">
-                    <div id="timerDisplay" class="timer-display">--:--</div>
+            <h1>AQC 2026 Fantasy Football Draft Board (Live Viewer)</h1>
+            <div class="header-actions">
+                <button id="viewTeamRosterBtn">View Team Rosters</button>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span id="syncStatusText">Synced with Draft</span>
                 </div>
             </div>
         </div>
 
-        <!-- Viewer Control Deck -->
-        <div class="controls-wrapper">
-            <div class="controls-container">
-                <button id="viewTeamRosterBtn">View Team Rosters</button>
-            </div>
-        </div>
-
-        <!-- Draft Board Grid Table -->
+        <!-- Draft Board Grid Table with Round Column -->
         <div class="table-responsive">
             <table id="draftBoard">
                 <thead>
@@ -404,29 +411,28 @@
     <script src="papaparse.min.js"></script>
     <script>
         let teamNames = [];
-        let draftedPicksHistory = [];
+        let draftedPicksCache = [];
         const totalTeams = 10;
         const totalRounds = 15;
+        let lastKnownStateString = "";
 
         const viewTeamRosterBtn = document.getElementById("viewTeamRosterBtn");
         const rosterModal = document.getElementById("rosterModal");
         const closeModalBtn = document.getElementById("closeModalBtn");
         const teamSelectDropdown = document.getElementById("teamSelectDropdown");
         const rosterTableBody = document.getElementById("rosterTableBody");
-        const timerDisplay = document.getElementById("timerDisplay");
 
         window.addEventListener("DOMContentLoaded", () => {
-            loadTeamNamesFromStorage();
+            loadTeamNames();
             initializeBoard();
             populateTeamDropdown();
-            loadDraftState();
+            pollDraftState();
 
-            // Poll localStorage every 1 second to sync live draft changes from the admin page
-            setInterval(() => {
-                loadDraftState();
-            }, 1000);
+            // Poll localStorage every 2 seconds to automatically display live updates from the main draft board
+            setInterval(pollDraftState, 2000);
         });
 
+        // Modal Open / Close Event Handlers
         viewTeamRosterBtn.addEventListener("click", () => {
             populateTeamDropdown();
             renderTeamRoster();
@@ -447,126 +453,21 @@
             renderTeamRoster();
         });
 
-        function loadTeamNamesFromStorage() {
-            const savedNames = localStorage.getItem("aqc_team_names");
-            if (savedNames) {
+        function loadTeamNames() {
+            const savedTeams = localStorage.getItem("aqc_team_names");
+            if (savedTeams) {
                 try {
-                    teamNames = JSON.parse(savedNames);
-                } catch(e) {
+                    teamNames = JSON.parse(savedTeams);
+                } catch (e) {
                     teamNames = [];
                 }
             }
             if (!teamNames || teamNames.length !== totalTeams) {
-                teamNames = [
-                    "Team 1", "Team 2", "Team 3", "Team 4", "Team 5",
-                    "Team 6", "Team 7", "Team 8", "Team 9", "Team 10"
-                ];
-            }
-        }
-
-        function initializeBoard() {
-            const headerRow = document.getElementById("headerRow");
-            headerRow.innerHTML = "";
-
-            const roundTh = document.createElement("th");
-            roundTh.className = "round-th";
-            roundTh.textContent = "Rnd";
-            headerRow.appendChild(roundTh);
-
-            for (let t = 1; t <= totalTeams; t++) {
-                const th = document.createElement("th");
-                th.className = "team-th";
-                th.textContent = teamNames[t - 1] || `Team ${t}`;
-                headerRow.appendChild(th);
-            }
-
-            const boardBody = document.getElementById("boardBody");
-            boardBody.innerHTML = "";
-
-            let pickCounter = 1;
-            for (let r = 1; r <= totalRounds; r++) {
-                const tr = document.createElement("tr");
-
-                const roundTd = document.createElement("td");
-                roundTd.className = "round-td";
-                roundTd.textContent = r;
-                tr.appendChild(roundTd);
-
+                teamNames = [];
                 for (let t = 1; t <= totalTeams; t++) {
-                    const td = document.createElement("td");
-                    td.className = "player-td";
-                    td.id = `cell-r${r}-t${t}`;
-                    td.dataset.round = r;
-                    td.dataset.team = t;
-                    td.dataset.pick = pickCounter;
-
-                    const pickSpan = document.createElement("div");
-                    pickSpan.className = "pick-number";
-                    pickSpan.textContent = pickCounter;
-                    td.appendChild(pickSpan);
-
-                    tr.appendChild(td);
-                    pickCounter++;
-                }
-                boardBody.appendChild(tr);
-            }
-        }
-
-        function loadDraftState() {
-            const savedDraftState = localStorage.getItem("aqc_draft_state");
-            if (savedDraftState) {
-                try {
-                    const parsedState = JSON.parse(savedDraftState);
-                    draftedPicksHistory = parsedState;
-                    
-                    // Reset grid cells first
-                    for (let r = 1; r <= totalRounds; r++) {
-                        for (let t = 1; t <= totalTeams; t++) {
-                            const cell = document.getElementById(`cell-r${r}-t${t}`);
-                            if (cell && !cell.querySelector('.player-name')) {
-                                // Keep clean if unpicked
-                            }
-                        }
-                    }
-
-                    parsedState.forEach(pick => {
-                        applyPickToBoard(pick.round, pick.team, pick.playerObj, pick.pickNumber);
-                    });
-                } catch (e) {
-                    console.error("Could not load draft state", e);
+                    teamNames.push(`Team ${t}`);
                 }
             }
-        }
-
-        function applyPickToBoard(round, team, playerObj, pickNumber) {
-            const cell = document.getElementById(`cell-r${round}-t${team}`);
-            if (!cell) return;
-
-            // Avoid re-rendering if already matches
-            const existingName = cell.querySelector('.player-name');
-            if (existingName && existingName.textContent === playerObj.Player) {
-                return;
-            }
-
-            cell.innerHTML = "";
-            const posClass = playerObj.Position ? `${playerObj.Position.trim().toUpperCase()}-cell` : "";
-            cell.className = `player-td ${posClass}`;
-
-            const nameDiv = document.createElement("div");
-            nameDiv.className = "player-name";
-            nameDiv.textContent = playerObj.Player;
-
-            const detailsDiv = document.createElement("div");
-            detailsDiv.className = "player-details";
-            detailsDiv.textContent = `${playerObj.Position || ''} - ${playerObj.Team || ''}`;
-
-            const pickSpan = document.createElement("div");
-            pickSpan.className = "pick-number";
-            pickSpan.textContent = pickNumber;
-
-            cell.appendChild(nameDiv);
-            cell.appendChild(detailsDiv);
-            cell.appendChild(pickSpan);
         }
 
         function populateTeamDropdown() {
@@ -590,48 +491,128 @@
             const selectedTeamNum = parseInt(teamSelectDropdown.value) || 1;
             rosterTableBody.innerHTML = "";
 
-            const teamPicks = draftedPicksHistory.filter(p => p.team === selectedTeamNum);
+            // Filter picks belonging to the selected team number
+            const teamPicks = draftedPicksCache.filter(pick => pick.team === selectedTeamNum);
+            // Sort by round or pick number ascending
+            teamPicks.sort((a, b) => a.pickNumber - b.pickNumber);
 
             if (teamPicks.length === 0) {
                 const tr = document.createElement("tr");
                 const td = document.createElement("td");
                 td.colSpan = 5;
                 td.className = "empty-roster-msg";
-                td.textContent = "No players drafted for this team yet.";
+                td.textContent = "No players drafted by this team yet.";
                 tr.appendChild(td);
                 rosterTableBody.appendChild(tr);
                 return;
             }
 
-            teamPicks.sort((a, b) => a.pickNumber - b.pickNumber);
-
             teamPicks.forEach(pick => {
                 const tr = document.createElement("tr");
-                
-                const tdRound = document.createElement("td");
-                tdRound.textContent = `Round ${pick.round}`;
-                
-                const tdPick = document.createElement("td");
-                tdPick.textContent = pick.pickNumber;
-                
-                const tdPlayer = document.createElement("td");
-                tdPlayer.style.fontWeight = "bold";
-                tdPlayer.textContent = pick.playerObj.Player || "Unknown";
-                
-                const tdPos = document.createElement("td");
-                tdPos.textContent = pick.playerObj.Position || "-";
-                
-                const tdTeam = document.createElement("td");
-                tdTeam.textContent = pick.playerObj.Team || "-";
-
-                tr.appendChild(tdRound);
-                tr.appendChild(tdPick);
-                tr.appendChild(tdPlayer);
-                tr.appendChild(tdPos);
-                tr.appendChild(tdTeam);
-
+                tr.innerHTML = `
+                    <td><strong>Round ${pick.round}</strong></td>
+                    <td>#${pick.pickNumber}</td>
+                    <td><strong>${pick.playerObj.Player}</strong></td>
+                    <td>${pick.playerObj.Position || "N/A"}</td>
+                    <td>${pick.playerObj.Team || "N/A"}</td>
+                `;
                 rosterTableBody.appendChild(tr);
             });
+        }
+
+        function initializeBoard() {
+            const headerRow = document.getElementById("headerRow");
+            const boardBody = document.getElementById("boardBody");
+
+            headerRow.innerHTML = "";
+            boardBody.innerHTML = "";
+
+            const roundTh = document.createElement("th");
+            roundTh.textContent = "Round";
+            roundTh.className = "round-th";
+            headerRow.appendChild(roundTh);
+
+            for (let t = 1; t <= totalTeams; t++) {
+                const th = document.createElement("th");
+                th.textContent = teamNames[t - 1] || `Team ${t}`;
+                th.className = "team-th";
+                headerRow.appendChild(th);
+            }
+
+            for (let r = 1; r <= totalRounds; r++) {
+                const tr = document.createElement("tr");
+
+                const roundTd = document.createElement("td");
+                roundTd.textContent = r;
+                roundTd.className = "round-td";
+                tr.appendChild(roundTd);
+
+                for (let t = 1; t <= totalTeams; t++) {
+                    const td = document.createElement("td");
+                    td.setAttribute("data-round", r);
+                    td.setAttribute("data-team", t);
+                    td.setAttribute("data-index", ((r - 1) * totalTeams) + (t - 1));
+                    td.className = "player-td";
+                    td.textContent = "";
+                    tr.appendChild(td);
+                }
+                boardBody.appendChild(tr);
+            }
+        }
+
+        function pollDraftState() {
+            loadTeamNames();
+            populateTeamDropdown();
+
+            const savedDraftState = localStorage.getItem("aqc_draft_state");
+            
+            // Only re-render if state has changed to prevent unnecessary layout thrashing
+            if (savedDraftState !== lastKnownStateString) {
+                lastKnownStateString = savedDraftState;
+                draftedPicksCache = [];
+                
+                // Clear existing cells first
+                const allPlayerCells = document.querySelectorAll("td.player-td");
+                allPlayerCells.forEach(cell => {
+                    cell.textContent = "";
+                    cell.className = "player-td";
+                });
+
+                if (savedDraftState) {
+                    try {
+                        const parsedState = JSON.parse(savedDraftState);
+                        draftedPicksCache = parsedState;
+                        
+                        parsedState.forEach(pick => {
+                            const cellIndex = ((pick.round - 1) * totalTeams) + (pick.team - 1);
+                            const targetCell = document.querySelector(`td[data-index='${cellIndex}']`);
+                            if (targetCell) {
+                                targetCell.innerHTML = `
+                                    <div class="player-name">${pick.playerObj.Player}</div>
+                                    <div class="player-details">${pick.playerObj.Position} - ${pick.playerObj.Team} | Bye: ${pick.playerObj.Bye}</div>
+                                    <div class="pick-number">${pick.pickNumber}</div>
+                                `;
+                                targetCell.className = "player-td";
+                                const pos = pick.playerObj.Position ? pick.playerObj.Position.trim() : "";
+                                targetCell.classList.add(`${pos}-cell`);
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Could not parse draft state", e);
+                    }
+                }
+                
+                // Re-initialize headers in case team names changed
+                const headerThs = document.querySelectorAll("#headerRow th.team-th");
+                headerThs.forEach((th, idx) => {
+                    th.textContent = teamNames[idx] || `Team ${idx + 1}`;
+                });
+
+                // Update roster modal view in real time if open
+                if (rosterModal.style.display === "flex") {
+                    renderTeamRoster();
+                }
+            }
         }
     </script>
 </body>
